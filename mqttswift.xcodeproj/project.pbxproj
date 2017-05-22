@@ -1,0 +1,222 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXAggregateTarget section */
+		848A15001E76783900E15ABB /* mqttswift */ = {
+			isa = PBXAggregateTarget;
+			buildConfigurationList = 848A15011E76783900E15ABB /* Build configuration list for PBXAggregateTarget "mqttswift" */;
+			buildPhases = (
+				848A15041E76786A00E15ABB /* ShellScript */,
+			);
+			dependencies = (
+			);
+			name = mqttswift;
+			productName = mqttswift1;
+		};
+/* End PBXAggregateTarget section */
+
+/* Begin PBXFileReference section */
+		84387A451E7BCCB900FEF9AC /* MqttCompliance.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttCompliance.swift; sourceTree = "<group>"; };
+		84387A461E7BCCB900FEF9AC /* MqttControlPacket.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttControlPacket.swift; sourceTree = "<group>"; };
+		84387A471E7BCCB900FEF9AC /* MqttControlPacketType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttControlPacketType.swift; sourceTree = "<group>"; };
+		84387A481E7BCCB900FEF9AC /* MqttQoS.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttQoS.swift; sourceTree = "<group>"; };
+		84387A491E7BCCB900FEF9AC /* MqttRetained.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttRetained.swift; sourceTree = "<group>"; };
+		84387A4B1E7BCCB900FEF9AC /* MqttSession.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttSession.swift; sourceTree = "<group>"; };
+		84387A4C1E7BCCB900FEF9AC /* MqttSessions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttSessions.swift; sourceTree = "<group>"; };
+		84387A4F1E7BCCD100FEF9AC /* MqttServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttServer.swift; sourceTree = "<group>"; };
+		84387A5C1E7C0E4700FEF9AC /* MqttPropertyIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttPropertyIdentifier.swift; sourceTree = "<group>"; };
+		845A62DE1E937D4800C9A702 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		848A14F71E76774700E15ABB /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
+		848A14F91E76774700E15ABB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		84C311A61E929C5000EC6CB5 /* MqttProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttProperties.swift; sourceTree = "<group>"; };
+		84DAE1A01E932E1D00B98C3D /* MqttReturnCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttReturnCode.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		848A14F01E76763B00E15ABB = {
+			isa = PBXGroup;
+			children = (
+				848A14F71E76774700E15ABB /* Package.swift */,
+				845A62DE1E937D4800C9A702 /* README.md */,
+				848A14F81E76774700E15ABB /* Sources */,
+				848A14FA1E76774700E15ABB /* Tests */,
+			);
+			sourceTree = "<group>";
+		};
+		848A14F81E76774700E15ABB /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				848A14F91E76774700E15ABB /* main.swift */,
+				84387A4F1E7BCCD100FEF9AC /* MqttServer.swift */,
+				84387A451E7BCCB900FEF9AC /* MqttCompliance.swift */,
+				84387A461E7BCCB900FEF9AC /* MqttControlPacket.swift */,
+				84387A471E7BCCB900FEF9AC /* MqttControlPacketType.swift */,
+				84387A5C1E7C0E4700FEF9AC /* MqttPropertyIdentifier.swift */,
+				84C311A61E929C5000EC6CB5 /* MqttProperties.swift */,
+				84387A481E7BCCB900FEF9AC /* MqttQoS.swift */,
+				84387A491E7BCCB900FEF9AC /* MqttRetained.swift */,
+				84DAE1A01E932E1D00B98C3D /* MqttReturnCode.swift */,
+				84387A4B1E7BCCB900FEF9AC /* MqttSession.swift */,
+				84387A4C1E7BCCB900FEF9AC /* MqttSessions.swift */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		848A14FA1E76774700E15ABB /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXProject section */
+		848A14F11E76763B00E15ABB /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 0820;
+				LastUpgradeCheck = 0830;
+				TargetAttributes = {
+					848A15001E76783900E15ABB = {
+						CreatedOnToolsVersion = 8.2.1;
+						DevelopmentTeam = C652JFWU23;
+						LastSwiftMigration = 0820;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = 848A14F41E76763B00E15ABB /* Build configuration list for PBXProject "mqttswift" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 848A14F01E76763B00E15ABB;
+			productRefGroup = 848A14F01E76763B00E15ABB;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				848A15001E76783900E15ABB /* mqttswift */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		848A15041E76786A00E15ABB /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "swift build\ncp .build/debug/mqttswift .";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		848A14F51E76763B00E15ABB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				ONLY_ACTIVE_ARCH = YES;
+			};
+			name = Debug;
+		};
+		848A14F61E76763B00E15ABB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+			};
+			name = Release;
+		};
+		848A15021E76783900E15ABB /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEVELOPMENT_TEAM = C652JFWU23;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
+			};
+			name = Debug;
+		};
+		848A15031E76783900E15ABB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEVELOPMENT_TEAM = C652JFWU23;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 3.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		848A14F41E76763B00E15ABB /* Build configuration list for PBXProject "mqttswift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				848A14F51E76763B00E15ABB /* Debug */,
+				848A14F61E76763B00E15ABB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		848A15011E76783900E15ABB /* Build configuration list for PBXAggregateTarget "mqttswift" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				848A15021E76783900E15ABB /* Debug */,
+				848A15031E76783900E15ABB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 848A14F11E76763B00E15ABB /* Project object */;
+}

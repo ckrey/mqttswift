@@ -1,0 +1,29 @@
+enum MqttPropertyIdentifier: UInt8 {
+    case PayloadFormatIndicator = 1
+    case PublicationExpiryInterval = 2
+    case ContentType = 3
+    case ResponseTopic = 8
+    case CorrelationData = 9
+    case SubscriptionIdentifier = 11
+    case SessionExpiryInterval = 17
+    case AssignedClientIdentifier = 18
+    case ServerKeepAlive = 19
+    case AuthMethod = 21
+    case AuthData = 22
+    case RequestProblemInformation = 23
+    case WillDelayInterval = 24
+    case RequestResponseInformation = 25
+    case ResponseInformation = 26
+    case ServerReference = 28
+    case ReasonString = 31
+    case ReceiveMaximum = 33
+    case TopicAliasMaximum = 34
+    case TopicAlias = 35
+    case MaximumQoS = 36
+    case RetainAvailable = 37
+    case UserProperty = 38
+    case MaximumPacketSize = 39
+    case WildcardSubscriptionAvailable = 40
+    case SubscriptionIdentifiersAvailable = 41
+    case SharedSubscriptionAvailable = 42
+}
