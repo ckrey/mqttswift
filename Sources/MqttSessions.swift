@@ -6,6 +6,9 @@ class MqttSessions {
 	var sessions: [String: MqttSession]
     var start: Date
 
+    var droppedQoS0Messages: Int
+    var sentMessages: Int
+
     public class func sharedInstance() -> MqttSessions {
         if theInstance == nil {
             theInstance = MqttSessions()
@@ -16,6 +19,8 @@ class MqttSessions {
     private init() {
         start = Date()
 		self.sessions = [String: MqttSession]()
+        self.droppedQoS0Messages = 0
+        self.sentMessages = 0
 	}
 
     func remove(session: MqttSession) {
@@ -36,64 +41,121 @@ class MqttSessions {
 		return mqttSession;
 	}
 
-	func summary() {
-		print ("MqttSession Summary")
-		for (clientId, session) in self.sessions {
-            print("\(clientId): \(session.socket != nil ? "on" : "off")")
-		}
-	}
+    class func processReceivedMessage(message: MqttMessage) {
 
-    class func processReceivedMessage(topic: String, payload: Data, retain: Bool, qos: MqttQoS) {
-
-        if retain {
-            MqttRetained.sharedInstance().store(topic: topic, data: payload)
+        if message.retain {
+            MqttRetained.sharedInstance().store(message:message)
         }
 
-        for (clientId, mqttSession) in MqttSessions.sharedInstance().sessions {
-            /* Todo check if allowed to read from here */
-            /* Todo check if has subscriptions for here */
-            if mqttSession.socket != nil {
-                print ("Sending to \(clientId) \(topic) \(payload)")
-                var publish = Data()
-                var u : UInt8
-                u = MqttControlPacketType.PUBLISH.rawValue << 4
-                publish.append(u)
-                let td = topic.data(using: String.Encoding.utf8)
-                publish.append(MqttControlPacket.mqttVariableByte(variable: 2 + td!.count + 1 + payload.count))
-                u = UInt8(td!.count / 256)
-                publish.append(u)
-                u = UInt8(td!.count % 256)
-                publish.append(u)
-                publish.append(td!)
-                u = 0
-                publish.append(u)
-                publish.append(payload)
-                do {
-                    try mqttSession.socket!.write(from: publish)
-                } catch {
-                    //
+        for (_, mqttSession) in MqttSessions.sharedInstance().sessions {
+            var matches = false;
+            for (_, subscription) in mqttSession.subscriptions {
+                if self.matches(topic:message.topic, topicFilter:subscription.topicFilter) {
+                    matches = true;
+                    if message.qos.rawValue > subscription.qos.rawValue {
+                        message.qos = subscription.qos
+                    }
+                    if subscription.subscriptionIdentifier != nil {
+                        if message.subscriptionIdentifiers == nil {
+                            message.subscriptionIdentifiers = [Int]()
+                        }
+                        message.subscriptionIdentifiers!.append(subscription.subscriptionIdentifier!)
+                    }
                 }
-            } else {
-                print ("Queueing to \(clientId) \(topic) \(payload)")
+            }
+
+            if matches {
+                DispatchQueue.main.async {
+                    mqttSession.publish(message:message)
+                }
             }
         }
     }
+    
+    class func matches(topic: String, topicFilter: String) -> Bool {
+        let topicComponents = topic.components(separatedBy: "/");
+        let topicFilterComponents = topicFilter.components(separatedBy: "/");
 
-    class func stats() {
-        print("Stats")
+        var topicComponent = 0;
+        var topicFilterComponent = 0;
 
-        let now = Date()
-        let seconds = Int(now.timeIntervalSince1970 - MqttSessions.sharedInstance().start.timeIntervalSince1970)
+        while topicComponent < topicComponents.count &&
+            topicFilterComponent < topicFilterComponents.count {
 
-        MqttSessions.processReceivedMessage(topic: "$SYS/broker/uptime",
-                                                                     payload: "\(seconds) seconds".data(using:String.Encoding.utf8)!,
-                                                                     retain: true,
-                                                                     qos: .AtMostOnce)
-        MqttSessions.processReceivedMessage(topic: "$SYS/broker/clients/total",
-                                                                     payload: "\(MqttSessions.sharedInstance().sessions.count)".data(using:String.Encoding.utf8)!,
-                                                                     retain: true,
-                                                                     qos: .AtMostOnce)
+                if topicFilterComponents[topicFilterComponent] == "#" &&
+                    !topicComponents[topicComponent].hasPrefix("$") {
+                    topicComponent = topicComponent + 1
+
+                } else if topicFilterComponents[topicFilterComponent] == "+" &&
+                    !topicComponents[topicComponent].hasPrefix("$") {
+
+                    topicComponent = topicComponent + 1
+                    topicFilterComponent = topicFilterComponent + 1
+
+                } else if topicComponents[topicComponent] == topicFilterComponents[topicFilterComponent] {
+                    topicComponent = topicComponent + 1
+                    topicFilterComponent = topicFilterComponent + 1
+                } else {
+                    return false
+                }
+        }
+
+        return true
     }
 
+/*        _             _
+ *  ___  | |_    __ _  | |_   ___
+ * / __| | __|  / _` | | __| / __|
+ * \__ \ | |_  | (_| | | |_  \__ \
+ * |___/  \__|  \__,_|  \__| |___/
+ */
+    class func stats() {
+        let now = Date()
+        let seconds = Int(now.timeIntervalSince1970 - MqttSessions.sharedInstance().start.timeIntervalSince1970)
+        self.statMessage(topic: "$SYS/broker/uptime", payload: "\(seconds)")
+
+        self.statMessage(topic: "$SYS/broker/clients/total", payload: "\(MqttSessions.sharedInstance().sessions.count)")
+        self.statMessage(topic: "$SYS/broker/clients/total", payload: "\(MqttSessions.sharedInstance().sessions.count)")
+        self.statMessage(topic: "$SYS/broker/clients/connected", payload: "\(MqttSessions.sharedInstance().sessions.count)")
+        self.statMessage(topic: "$SYS/broker/clients/expired", payload: "\(MqttSessions.sharedInstance().sessions.count)")
+        self.statMessage(topic: "$SYS/broker/clients/disconnected", payload: "\(MqttSessions.sharedInstance().sessions.count)")
+
+        self.statMessage(topic: "$SYS/broker/clients/maximum", payload: "\(MqttSessions.sharedInstance().sessions.count)")
+
+        self.statMessage(topic: "$SYS/broker/bytes/received", payload: "-1")
+        self.statMessage(topic: "$SYS/load/bytes/received/1", payload: "-1")
+        self.statMessage(topic: "$SYS/load/bytes/received/5", payload: "-1")
+        self.statMessage(topic: "$SYS/load/bytes/received/15", payload: "-1")
+
+        self.statMessage(topic: "$SYS/broker/bytes/sent", payload: "-1")
+        self.statMessage(topic: "$SYS/load/bytes/sent/1", payload: "-1")
+        self.statMessage(topic: "$SYS/load/bytes/sent/5", payload: "-1")
+        self.statMessage(topic: "$SYS/load/bytes/sent/15", payload: "-1")
+
+        var subscriptions = 0
+        for (_, mqttSession) in MqttSessions.sharedInstance().sessions {
+            for (_, _) in mqttSession.subscriptions {
+                subscriptions = subscriptions + 1
+            }
+        }
+        self.statMessage(topic: "$SYS/subscriptions/count", payload: "\(subscriptions)")
+
+        self.statMessage(topic: "$SYS/retained messages/count", payload: "\(MqttRetained.sharedInstance().retained.count)")
+        self.statMessage(topic: "$SYS/broker/messages/inflight", payload: "-1")
+        self.statMessage(topic: "$SYS/broker/messages/stored", payload: "-1")
+        self.statMessage(topic: "$SYS/broker/messages/received", payload: "-1")
+        self.statMessage(topic: "$SYS/publish/messages/sent", payload: "\(MqttSessions.sharedInstance().sentMessages)")
+        self.statMessage(topic: "$SYS/publish/messages/dropped", payload: "-1")
+        self.statMessage(topic: "$SYS/publish/messages/droppedQoS0", payload: "\(MqttSessions.sharedInstance().droppedQoS0Messages)")
+        self.statMessage(topic: "$SYS/publish/messages/received", payload: "-1")
+        MqttCompliance.sharedInstance().stats()
+    }
+
+    class func statMessage(topic: String, payload: String) {
+        MqttSessions.processReceivedMessage(message: MqttMessage(topic: topic,
+                                                                 data: payload.data(using:String.Encoding.utf8),
+                                                                 qos: .AtMostOnce,
+                                                                 retain: true))
+    }
 }
 

@@ -18,9 +18,10 @@ var serverMoved: String? = nil
 var authMethods = [String]()
 var allowAnonymous = false
 var users: [String: String] = [:]
+var userProperties: [String: String] = [:]
 var accessControl: [String: [String: Bool]] = [:]
 
-while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:M:p:P:Q:rR:sT:u:U:vw?"),
+while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:M:p:P:Q:rR:sS:T:u:U:vw?"),
     option != -1 {
         switch UnicodeScalar(CUnsignedChar(option)) {
         case "a":
@@ -72,8 +73,6 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:
             }
         case "r":
             retainAvailable = true
-        case "s":
-            sharedSubscriptionAvailable = true
 
         case "R":
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
@@ -82,6 +81,15 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:
                 if r != nil {
                     receiveMaximum = r!
                 }
+            }
+
+        case "s":
+            sharedSubscriptionAvailable = true
+
+        case "S":
+            let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
+            if s != nil {
+                serverToUse = s!
             }
 
         case "T":
@@ -96,16 +104,19 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
             if s != nil {
                 let components = s!.components(separatedBy: ":")
-                    if components.count == 1 {
-                        users[components[0]] = ""
-                    } else if components.count == 2 {
-                        users[components[0]] = components[1]
-                    }
+                if components.count == 1 {
+                    users[components[0]] = ""
+                } else if components.count == 2 {
+                    users[components[0]] = components[1]
+                }
             }
         case "U":
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
             if s != nil {
-                serverToUse = s!
+                let components = s!.components(separatedBy: "=")
+                if  components.count == 2 {
+                    userProperties[components[0]] = components[1]
+                }
             }
         case "v":
             verbose = true
@@ -127,9 +138,10 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:
             print("\t-r RETAIN is available (default not)")
             print("\t-R max receive (input) Maximum (default 1)")
             print("\t-s shared subscriptions available (default off)")
+            print("\t-S server use another server (default none)")
             print("\t-T max topic alias Maximum (default 0)")
             print("\t-u user[:password] add user with password (default none)")
-            print("\t-U server use another server (default none)")
+            print("\t-U name=value add user property")
             print("\t-v verbose (default off)")
             print("\t-w wildcard subscriptions available (default off)")
 
@@ -162,6 +174,7 @@ if verbose {
     print("\tauthMethods \(authMethods)")
     print("\tallowAnonymous \(allowAnonymous)")
     print("\tusers \(users)")
+    print("\tuserProperties \(userProperties)")
     print("\taccessControl \(accessControl)")
     print()
 }
@@ -184,6 +197,7 @@ let server = MqttServer(verbose: verbose,
                         authMethods: authMethods,
                         allowAnonymous: allowAnonymous,
                         users: users,
+                        userProperties: userProperties,
                         accessControl: accessControl)
 server.run()
 

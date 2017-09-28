@@ -18,7 +18,7 @@ class MqttControlPacket {
         }
 
         if self.complete() {
-            print ("MqttControlPacket complete", terminator: ": ")
+            //print ("MqttControlPacket complete", terminator: ": ")
             var end = 31
             if self.array.count - 1 < end {
                 end = self.array.count - 1
@@ -32,17 +32,17 @@ class MqttControlPacket {
                 print ()
             }
 
-            let cpt = self.mqttControlPacketType()
-            let dup = self.mqttControlPacketDup()
-            let qos = self.mqttControlPacketQoS()
-            let retain = self.mqttControlPacketRetain()
-            let pid = self.mqttPacketIdentifier()
-            print(String(format:"MqttControlPacket: %02x d%d q%d r%d p%d",
-                         cpt!.rawValue,
-                         dup! ? 1 : 0,
-                         qos!.rawValue,
-                         retain! ? 1 : 0,
-                         pid != nil ? pid! : -1))
+//            let cpt = self.mqttControlPacketType()
+//            let dup = self.mqttControlPacketDup()
+//            let qos = self.mqttControlPacketQoS()
+//            let retain = self.mqttControlPacketRetain()
+//            let pid = self.mqttPacketIdentifier()
+//            print(String(format:"MqttControlPacket: %02x d%d q%d r%d p%d",
+//                         cpt!.rawValue,
+//                         dup! ? 1 : 0,
+//                         qos!.rawValue,
+//                         retain! ? 1 : 0,
+//                         pid != nil ? pid! : -1))
             return (true, MqttReturnCode.Success)
         } else {
             let cpt = self.mqttControlPacketType()
@@ -242,7 +242,7 @@ class MqttControlPacket {
                     let end = rl! + 1 + rll! - 1
                     var start: Int
                     start = 1 + rll! + 10 + pll!
-                    print ("Payload bounds \(start) \(end)")
+                    //print ("Payload bounds \(start) \(end)")
                     if start <= end {
                         for i in start ... end {
                             p.append(&self.array[i], count: 1)
@@ -268,7 +268,7 @@ class MqttControlPacket {
                     } else {
                         start = 1 + rll! + 2 + tl! + pll!
                     }
-                    print ("Payload bounds \(start) \(end)")
+                    //print ("Payload bounds \(start) \(end)")
                     if start <= end {
                         for i in start ... end {
                             p.append(&self.array[i], count: 1)
@@ -285,7 +285,8 @@ class MqttControlPacket {
                     var p = Data()
                     let end = rl! + 1 + rll! - 1
                     var start: Int
-                    start = 1 + rll! + 2 + pll!
+                    start = 1 + rll! + 2 + pll! + pl!
+                    //print ("Payload bounds \(start) \(end)")
                     if start <= end {
                         for i in start ... end {
                             p.append(&self.array[i], count: 1)
@@ -300,6 +301,7 @@ class MqttControlPacket {
                 let end = rl! + 1 + rll! - 1
                 var start: Int
                 start = 1 + rll! + 2
+                //print ("Payload bounds \(start) \(end)")
                 if start <= end {
                     for i in start ... end {
                         p.append(&self.array[i], count: 1)
@@ -371,8 +373,9 @@ class MqttControlPacket {
         }
     }
 
-    func mqttSubscribeTopicFilters() -> [String: MqttQoS] {
-        var stf = [String: MqttQoS]()
+    func mqttSubscribeTopicFilters() -> [MqttSubscription] {
+        var stf = [MqttSubscription]()
+
         var payload = self.mqttPayload()
         if payload != nil {
             var position = 0
@@ -386,12 +389,17 @@ class MqttControlPacket {
                             stringData.append(&(payload![i]), count: 1)
                         }
                     }
-                    let string = String(data: stringData, encoding: String.Encoding.utf8)
+                    let subscription = MqttSubscription()
+                    subscription.topicFilter = String(data: stringData, encoding: String.Encoding.utf8)
                     let byte = payload![position + 2 + stringLength]
-                    let qos = MqttQoS(rawValue: byte)
-                    if string != nil {
-                        stf[string!] = qos
+                    subscription.qos = MqttQoS(rawValue: byte & 0x03)!
+                    subscription.noLocal = (byte & 0x04 != 0)
+                    subscription.retainAsPublish = (byte & 0x08 != 0)
+                    subscription.retainHandling = MqttRetainHandling(rawValue: (byte & 0x30) >> 4)!
+                    if self.mqttProperties() != nil && self.mqttProperties()!.subscriptionIdentifiers != nil {
+                        subscription.subscriptionIdentifier = self.mqttProperties()!.subscriptionIdentifiers![0]
                     }
+                    stf.append(subscription)
                     position = position + 2 + stringLength + 1
                 } else {
                     break;
@@ -443,125 +451,158 @@ class MqttControlPacket {
                     mqttProperties.payloadFormatIndicator = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.PublicationExpiryInterval.rawValue:
                     mqttProperties.publicationExpiryInterval = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
+
                 case MqttPropertyIdentifier.ContentType.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.contentType = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.ResponseTopic.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.responseTopic = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.CorrelationData.rawValue:
                     let binaryLength = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.correlationData = self.mqttBinaryData(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - binaryLength!
                     break
+
                 case MqttPropertyIdentifier.SubscriptionIdentifier.rawValue:
-                    mqttProperties.subscriptionIdentifier = self.mqttVariableByteInteger(start: ppos! + pl! - remaining + 1)
-                    remaining = remaining - MqttControlPacket.mqttVariableByteIntegerLength(variable: mqttProperties.subscriptionIdentifier)!
+                    let subscriptionIdentifier = self.mqttVariableByteInteger(start: ppos! + pl! - remaining + 1)
+                    if mqttProperties.subscriptionIdentifiers == nil {
+                        mqttProperties.subscriptionIdentifiers = [Int]()
+                    }
+                    mqttProperties.subscriptionIdentifiers!.append(subscriptionIdentifier!)
+
+                    remaining = remaining - MqttControlPacket.mqttVariableByteIntegerLength(variable: subscriptionIdentifier)!
                     break
+
                 case MqttPropertyIdentifier.SessionExpiryInterval.rawValue:
                     mqttProperties.sessionExpiryInterval = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
+
                 case MqttPropertyIdentifier.AssignedClientIdentifier.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.assignedClientIdentifier = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.ServerKeepAlive.rawValue:
                     mqttProperties.serverKeepAlive = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
+
                 case MqttPropertyIdentifier.AuthMethod.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.authMethod = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.AuthData.rawValue:
                     let binaryLength = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.authData = self.mqttBinaryData(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - binaryLength!
+                    break;
+
                 case MqttPropertyIdentifier.RequestProblemInformation.rawValue:
                     mqttProperties.requestProblemInformation = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.WillDelayInterval.rawValue:
                     mqttProperties.willDelayInterval = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
+
                 case MqttPropertyIdentifier.RequestResponseInformation.rawValue:
                     mqttProperties.requestResponseInformation = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.ResponseInformation.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.responseInformation = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.ServerReference.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.serverReference = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.ReasonString.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.reasonString = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
+
                 case MqttPropertyIdentifier.ReceiveMaximum.rawValue:
                     mqttProperties.receiveMaximum = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
+
                 case MqttPropertyIdentifier.TopicAliasMaximum.rawValue:
                     mqttProperties.topicAliasMaximum = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
+
                 case MqttPropertyIdentifier.TopicAlias.rawValue:
                     mqttProperties.topicAlias = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
+
                 case MqttPropertyIdentifier.MaximumQoS.rawValue:
                     mqttProperties.maximumQoS = MqttQoS(rawValue:self.array[ppos! + pl! - remaining + 1])
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.RetainAvailable.rawValue:
                     mqttProperties.retainAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.UserProperty.rawValue:
                     let keyUtf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     let key = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     let valueUtf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1 + 2 + keyUtf8Length!)
                     let value = self.mqttUtf8String(start: ppos! + pl! - remaining + 1 + 2 + keyUtf8Length!)
-                    if mqttProperties.userProperty == nil {
-                        mqttProperties.userProperty = [String: String]()
+                    if mqttProperties.userProperties == nil {
+                        mqttProperties.userProperties = [[String: String]]()
                     }
-                    mqttProperties.userProperty![key!] = value!
+                    mqttProperties.userProperties!.append([key!: value!])
                     remaining = remaining - 2 - keyUtf8Length! - 2 - valueUtf8Length!
                     break
+
                 case MqttPropertyIdentifier.MaximumPacketSize.rawValue:
                     mqttProperties.maximumPacketSize = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
+
                 case MqttPropertyIdentifier.WildcardSubscriptionAvailable.rawValue:
                     mqttProperties.wildcardSubscriptionAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.SubscriptionIdentifiersAvailable.rawValue:
                     mqttProperties.subscriptionIdentifiersAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+
                 case MqttPropertyIdentifier.SharedSubscriptionAvailable.rawValue:
                     mqttProperties.sharedSubscriptionAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
+                    
                 default:
                     return nil
                 }

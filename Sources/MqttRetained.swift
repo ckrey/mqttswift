@@ -10,28 +10,17 @@ class MqttRetained {
         return theInstance!
     }
 
-	var retained : [String: Data]
+    var retained : [String: MqttMessage]
 
 	private init() {
-		self.retained = [String: Data]()
+        self.retained = [String: MqttMessage]()
 	}
 
-	func store(topic: String, data: Data) {
-		if data.count == 0 {
-			self.retained[topic] = nil
+    func store(message: MqttMessage!) {
+		if message.data.count == 0 {
+			self.retained[message.topic] = nil
 		} else {
-			self.retained[topic] = data
-		}
-	}
-
-	func get(topic: String) -> Data? {
-		return self.retained[topic];
-	}
-
-    func summary() {
-        print ("MqttRetained Summary")
-        for (topic, data) in self.retained {
-            print("\(topic): \(data)")
+			self.retained[message.topic] = message
         }
-    }
+	}
 }

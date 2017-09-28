@@ -6,7 +6,7 @@ class MqttProperties {
     var contentType: String? = nil
     var responseTopic: String? = nil
     var correlationData: Data? = nil
-    var subscriptionIdentifier: Int? = nil
+    var subscriptionIdentifiers: [Int]? = nil
     var sessionExpiryInterval: Int? = nil
     var assignedClientIdentifier: String? = nil
     var serverKeepAlive: Int? = nil
@@ -23,7 +23,7 @@ class MqttProperties {
     var topicAlias: Int? = nil
     var maximumQoS: MqttQoS? = nil
     var retainAvailable: UInt8? = nil
-    var userProperty: [String: String]? = nil
+    var userProperties: [[String: String]]? = nil
     var maximumPacketSize: Int? = nil
     var wildcardSubscriptionAvailable: UInt8? = nil
     var subscriptionIdentifiersAvailable: UInt8? = nil

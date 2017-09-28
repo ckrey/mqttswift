@@ -31,10 +31,15 @@
 		84387A4F1E7BCCD100FEF9AC /* MqttServer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttServer.swift; sourceTree = "<group>"; };
 		84387A5C1E7C0E4700FEF9AC /* MqttPropertyIdentifier.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttPropertyIdentifier.swift; sourceTree = "<group>"; };
 		845A62DE1E937D4800C9A702 /* README.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
+		848368051F7298FB00914F4B /* MqttSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttSubscription.swift; sourceTree = "<group>"; };
 		848A14F71E76774700E15ABB /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 		848A14F91E76774700E15ABB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		84AC1C731F6E55E70091596D /* MqttInflight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttInflight.swift; sourceTree = "<group>"; };
+		84AC1C741F6FA6470091596D /* MqttQueued.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttQueued.swift; sourceTree = "<group>"; };
+		84AC1C751F6FA6CF0091596D /* MqttMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttMessage.swift; sourceTree = "<group>"; };
 		84C311A61E929C5000EC6CB5 /* MqttProperties.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttProperties.swift; sourceTree = "<group>"; };
 		84DAE1A01E932E1D00B98C3D /* MqttReturnCode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttReturnCode.swift; sourceTree = "<group>"; };
+		84E8A0481F5E86B800E3BFCA /* MqttRetainHandling.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MqttRetainHandling.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -58,8 +63,13 @@
 				84387A471E7BCCB900FEF9AC /* MqttControlPacketType.swift */,
 				84387A5C1E7C0E4700FEF9AC /* MqttPropertyIdentifier.swift */,
 				84C311A61E929C5000EC6CB5 /* MqttProperties.swift */,
+				84AC1C751F6FA6CF0091596D /* MqttMessage.swift */,
+				848368051F7298FB00914F4B /* MqttSubscription.swift */,
 				84387A481E7BCCB900FEF9AC /* MqttQoS.swift */,
+				84E8A0481F5E86B800E3BFCA /* MqttRetainHandling.swift */,
 				84387A491E7BCCB900FEF9AC /* MqttRetained.swift */,
+				84AC1C731F6E55E70091596D /* MqttInflight.swift */,
+				84AC1C741F6FA6470091596D /* MqttQueued.swift */,
 				84DAE1A01E932E1D00B98C3D /* MqttReturnCode.swift */,
 				84387A4B1E7BCCB900FEF9AC /* MqttSession.swift */,
 				84387A4C1E7BCCB900FEF9AC /* MqttSessions.swift */,
@@ -81,12 +91,12 @@
 			isa = PBXProject;
 			attributes = {
 				LastSwiftUpdateCheck = 0820;
-				LastUpgradeCheck = 0830;
+				LastUpgradeCheck = 0900;
 				TargetAttributes = {
 					848A15001E76783900E15ABB = {
 						CreatedOnToolsVersion = 8.2.1;
 						DevelopmentTeam = C652JFWU23;
-						LastSwiftMigration = 0820;
+						LastSwiftMigration = 0830;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -128,12 +138,18 @@
 		848A14F51E76763B00E15ABB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
@@ -153,12 +169,18 @@
 		848A14F61E76763B00E15ABB /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
 				CLANG_WARN_CONSTANT_CONVERSION = YES;
 				CLANG_WARN_EMPTY_BODY = YES;
 				CLANG_WARN_ENUM_CONVERSION = YES;
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
