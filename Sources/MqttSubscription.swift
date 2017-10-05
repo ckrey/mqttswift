@@ -9,6 +9,7 @@ import Foundation
 
 class MqttSubscription {
     var topicFilter: String!
+    var subscribeOptions: UInt8 = 0
     var qos: MqttQoS = MqttQoS.AtMostOnce
     var noLocal: Bool = false
     var retainHandling: MqttRetainHandling = MqttRetainHandling.SendRetained

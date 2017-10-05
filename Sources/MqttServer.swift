@@ -3,6 +3,11 @@ import Socket
 import Dispatch
 
 class MqttServer {
+    private static var theInstance: MqttServer?
+
+    public class func sharedInstance() -> MqttServer {
+        return theInstance!
+    }
 
     static let bufferSize = 4096
 
@@ -30,7 +35,6 @@ class MqttServer {
     let start = Date()
 
     var listenSocket: Socket? = nil
-    var continueRunning = true
     var connectedSockets = [Int32: Socket]()
     let socketLockQueue = DispatchQueue(label: "MqttSocketLockQueue")
 
@@ -74,6 +78,7 @@ class MqttServer {
         self.users = users
         self.userProperties = userProperties
         self.accessControl = accessControl
+        MqttServer.theInstance = self
     }
 
     deinit {
@@ -96,33 +101,32 @@ class MqttServer {
 
                 try socket.listen(on: self.port)
                 print("Listening on port: \(socket.listeningPort)")
-                repeat {
+                while true {
                     let newSocket = try socket.acceptClientConnection()
                     print("Accepted connection from: \(newSocket.remoteHostname) on port \(newSocket.remotePort)")
                     print("Socket Signature: \(newSocket.signature?.description)")
                     self.addNewConnection(socket: newSocket)
-                } while self.continueRunning
+                }
             }
             catch let error {
                 guard let socketError = error as? Socket.Error else {
                     print("Unexpected error...")
                     return
                 }
-
-                if self.continueRunning {
-                    print("Error reported:\n \(socketError.description)")
-                }
+                print("Error reported:\n \(socketError.description)")
             }
         }
 
         MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/version",
                                                                  data: "m5s 0.0.1".data(using:String.Encoding.utf8),
                                                                  qos: .AtMostOnce,
-                                                                 retain: true))
+                                                                 retain: true),
+                                            from:"")
         MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/timestamp",
                                                                  data: Date().description.data(using:String.Encoding.utf8),
                                                                  qos: .AtMostOnce,
-                                                                 retain: true))
+                                                                 retain: true),
+                                            from:"")
         let q = DispatchQueue.global()
 
         var sysTimer: DispatchSourceTimer?
@@ -144,17 +148,18 @@ class MqttServer {
         let queue = DispatchQueue.global(qos: .default)
         queue.async { [unowned self, socket] in
             var shouldKeepRunning = true
-            var returnCode : MqttReturnCode?
+            var returnCode : MqttReturnCode = MqttReturnCode.Success
             var cpt: MqttControlPacketType? = nil
             var connectReceived = false
             var mqttSession: MqttSession?
-            var user: String?
             var readData = Data(capacity: MqttServer.bufferSize)
             var cp : MqttControlPacket?
+
             MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/I/new Client",
                                                                      data: "\(Int(Date.init().timeIntervalSince1970)): \(socket.remoteHostname):\(socket.remotePort)".data(using:String.Encoding.utf8),
                                                                      qos: .AtMostOnce,
-                                                                     retain: false))
+                                                                     retain: false),
+                                                from:"")
 
             do {
                 repeat {
@@ -391,9 +396,7 @@ class MqttServer {
                                                         } else {
 
                                                         }
-                                                        if requiredPassword == givenPassword {
-                                                            user = userName
-                                                        } else {
+                                                        if requiredPassword != givenPassword {
                                                             MqttCompliance.sharedInstance().log(target: "Bad user name or password")
                                                             returnCode = MqttReturnCode.BadUserNameOrPassword
                                                             shouldKeepRunning = false
@@ -406,9 +409,7 @@ class MqttServer {
                                                         shouldKeepRunning = false
                                                     } else {
                                                         if password == nil {
-                                                            if self.allowAnonymous {
-                                                                user = ""
-                                                            } else {
+                                                            if !self.allowAnonymous {
                                                                 MqttCompliance.sharedInstance().log(target: "Not Authorized")
                                                                 returnCode = MqttReturnCode.NotAuthorized
                                                                 shouldKeepRunning = false
@@ -432,8 +433,6 @@ class MqttServer {
                                                 }
                                             }
 
-                                            let mqttProperties = cp!.mqttProperties()
-
                                             /* Session */
                                             if shouldKeepRunning {
                                                 mqttSession = MqttSessions.sharedInstance().get(clientId: clientId!)
@@ -452,156 +451,17 @@ class MqttServer {
                                                     }
                                                 }
 
-                                                if mqttProperties != nil {
-                                                    if (mqttProperties!.willDelayInterval != nil) {
-                                                        mqttSession!.willDelayInterval = mqttProperties!.willDelayInterval!
-                                                    }
-                                                    if (mqttProperties!.sessionExpiryInterval != nil) {
-                                                        mqttSession!.sessionExpiryInterval = mqttProperties!.sessionExpiryInterval!
-                                                    }
-                                                    /* Maximum Packet Size */
-                                                    if (mqttProperties!.maximumPacketSize != nil) {
-                                                        if mqttProperties!.maximumPacketSize! == 0 ||
-                                                            mqttProperties!.maximumPacketSize! >  2684354565 {
-                                                            MqttCompliance.sharedInstance().log(target: "Maximum Packet Size illegal Value")
-                                                            returnCode = MqttReturnCode.ProtocolError
-                                                            shouldKeepRunning = false
-                                                        } else {
-                                                            mqttSession!.maximumPacketSize = mqttProperties!.maximumPacketSize
-                                                        }
-                                                    }
-                                                }
+                                                mqttSession!.socket = socket
 
-                                                if (shouldKeepRunning) {
-                                                    mqttSession!.willFlag = willFlag
-                                                    mqttSession!.willTopic = willTopic
-                                                    mqttSession!.willMessage = willMessage
-                                                    mqttSession!.willQoS = willQoS
-                                                    mqttSession!.willRetain = willRetain
+                                                /* Todo add kickout same clientId handling */
+                                                mqttSession!.user = userName
+                                                mqttSession!.willFlag = willFlag
+                                                mqttSession!.willTopic = willTopic
+                                                mqttSession!.willMessage = willMessage
+                                                mqttSession!.willQoS = willQoS
+                                                mqttSession!.willRetain = willRetain
 
-                                                    mqttSession!.socket = socket
-                                                    /* Todo add kickout same clientId handling */
-
-                                                    MqttCompliance.sharedInstance().log(target: "MQTT-3.2.0-1")
-                                                    MqttCompliance.sharedInstance().log(target: "MQTT-3.2.0-2")
-
-                                                    mqttSession!.connectKeepAlive = cp!.mqttConnectKeepAlive()!
-                                                    mqttSession!.serverKeepAlive = cp!.mqttConnectKeepAlive()!
-                                                    mqttSession!.lastPacket = Date()
-                                                    var connack = Data()
-                                                    var u : UInt8
-                                                    u = MqttControlPacketType.CONNACK.rawValue << 4
-                                                    connack.append(u)
-
-                                                    MqttCompliance.sharedInstance().log(target: "MQTT-3.2.2-1")
-
-                                                    var variableData = Data()
-
-                                                    u = 0
-                                                    if mqttSession!.present != nil && mqttSession!.present! {
-                                                        u = u | 1
-                                                    }
-                                                    variableData.append(u)
-                                                    u = 0
-                                                    if returnCode != nil {
-                                                        u = returnCode!.rawValue
-                                                    }
-                                                    variableData.append(u)
-
-                                                    var remaining = Data()
-                                                    u = MqttPropertyIdentifier.ReceiveMaximum.rawValue
-                                                    remaining.append(u)
-                                                    remaining.append(MqttControlPacket.mqttTwoByte(variable: self.receiveMaximum))
-
-                                                    u = MqttPropertyIdentifier.MaximumQoS.rawValue
-                                                    remaining.append(u)
-                                                    u = self.maximumQoS.rawValue
-                                                    remaining.append(u)
-
-                                                    u = MqttPropertyIdentifier.RetainAvailable.rawValue
-                                                    remaining.append(u)
-                                                    u = self.retainAvailable ? 1 : 0
-                                                    remaining.append(u)
-
-                                                    u = MqttPropertyIdentifier.MaximumPacketSize.rawValue
-                                                    remaining.append(u)
-                                                    remaining.append(MqttControlPacket.mqttFourByte(variable: self.maximumPacketSize))
-
-                                                    u = MqttPropertyIdentifier.AssignedClientIdentifier.rawValue
-                                                    remaining.append(u)
-                                                    remaining.append(MqttControlPacket.mqttUtf8(variable: clientId!))
-
-                                                    u = MqttPropertyIdentifier.TopicAliasMaximum.rawValue
-                                                    remaining.append(u)
-                                                    remaining.append(MqttControlPacket.mqttTwoByte(variable: self.topicAliasMaximum))
-
-                                                    u = MqttPropertyIdentifier.ResponseInformation.rawValue
-                                                    remaining.append(u)
-                                                    remaining.append(MqttControlPacket.mqttUtf8(variable: "Todo"))
-
-                                                    u = MqttPropertyIdentifier.WildcardSubscriptionAvailable.rawValue
-                                                    remaining.append(u)
-                                                    u = self.wildcardSubscritionAvailable ? 1 : 0
-                                                    remaining.append(u)
-
-                                                    u = MqttPropertyIdentifier.SubscriptionIdentifiersAvailable.rawValue
-                                                    remaining.append(u)
-                                                    u = self.subscriptionIdentifiersAvailable ? 1 : 0
-                                                    remaining.append(u)
-
-                                                    u = MqttPropertyIdentifier.SharedSubscriptionAvailable.rawValue
-                                                    remaining.append(u)
-                                                    u = self.sharedSubscriptionAvailable ? 1 : 0
-                                                    remaining.append(u)
-
-                                                    if (self.serverKeepAlive != nil) {
-                                                        mqttSession!.serverKeepAlive = self.serverKeepAlive!
-                                                        u = MqttPropertyIdentifier.ServerKeepAlive.rawValue
-                                                        remaining.append(u)
-                                                        remaining.append(MqttControlPacket.mqttTwoByte(variable: self.serverKeepAlive!))
-                                                    }
-
-                                                    if (self.serverMoved != nil) {
-                                                        u = MqttPropertyIdentifier.ServerReference.rawValue
-                                                        remaining.append(u)
-                                                        remaining.append(MqttControlPacket.mqttUtf8(variable: self.serverMoved!))
-                                                    } else if (self.serverToUse != nil) {
-                                                        u = MqttPropertyIdentifier.ServerReference.rawValue
-                                                        remaining.append(u)
-                                                        remaining.append(MqttControlPacket.mqttUtf8(variable: self.serverToUse!))
-                                                    }
-
-                                                    u = MqttPropertyIdentifier.ResponseInformation.rawValue
-                                                    remaining.append(u)
-                                                    remaining.append(MqttControlPacket.mqttUtf8(variable: "Todo"))
-
-                                                    for (propertyName, propertyValue) in self.userProperties {
-                                                        u = MqttPropertyIdentifier.UserProperty.rawValue
-                                                        remaining.append(u)
-                                                        remaining.append(MqttControlPacket.mqttUtf8(variable:propertyName))
-                                                        remaining.append(MqttControlPacket.mqttUtf8(variable: propertyValue))
-                                                    }
-
-                                                    /* Auth Method */
-                                                    /* Auth Data */
-
-                                                    variableData.append(MqttControlPacket.mqttVariableByte(variable: remaining.count))
-                                                    variableData.append(remaining)
-
-                                                    connack.append(MqttControlPacket.mqttVariableByte(variable: variableData.count))
-                                                    connack.append(variableData)
-
-                                                    print ("remaining \(remaining)")
-                                                    print ("variableData \(variableData)")
-                                                    print ("connack \(connack)")
-
-                                                    mqttSession!.debug(s:"CONNACK sent", p:nil)
-                                                    try socket.write(from: connack)
-                                                }
-
-                                                if returnCode != nil && returnCode != MqttReturnCode.Success {
-                                                    shouldKeepRunning = false
-                                                }
+                                                (shouldKeepRunning, returnCode) = mqttSession!.connect(cp:cp)
                                             }
                                         } else {
                                             if !connectReceived {
@@ -611,340 +471,34 @@ class MqttServer {
                                             }
                                             if shouldKeepRunning {
                                                 if cpt == MqttControlPacketType.PUBLISH {
-                                                    print ("PUBLISH received")
-                                                    mqttSession!.lastPacket = Date()
-
-                                                    let topic = cp!.mqttTopic()
-
-                                                    if topic == nil {
-                                                        MqttCompliance.sharedInstance().log(target: "MQTT-3.3.2-1")
-                                                        returnCode = MqttReturnCode.TopicNameInvalid
-                                                        shouldKeepRunning = false
-                                                    }
-
-                                                    if shouldKeepRunning && topic!.characters.count == 0 {
-                                                        MqttCompliance.sharedInstance().log(target: "MQTT-4.7.3-1")
-                                                        returnCode = MqttReturnCode.TopicNameInvalid
-                                                        shouldKeepRunning = false
-                                                    }
-
-                                                    if shouldKeepRunning && topic!.contains("+") {
-                                                        MqttCompliance.sharedInstance().log(target: "MQTT-3.3.2-2")
-                                                        returnCode = MqttReturnCode.TopicNameInvalid
-                                                        shouldKeepRunning = false
-                                                    }
-
-                                                    if shouldKeepRunning && topic!.contains("#") {
-                                                        MqttCompliance.sharedInstance().log(target: "MQTT-3.3.2-2")
-                                                        returnCode = MqttReturnCode.TopicNameInvalid
-                                                        shouldKeepRunning = false
-                                                    }
-
-                                                    if shouldKeepRunning {
-                                                        /* Todo check if allowed to write here */
-
-                                                        let retain = cp!.mqttControlPacketRetain()
-                                                        let qos = cp!.mqttControlPacketQoS()
-                                                        let mqttProperties = cp!.mqttProperties()
-
-                                                        if qos == nil {
-                                                            MqttCompliance.sharedInstance().log(target: "MQTT-3.3.1-4")
-                                                            returnCode = MqttReturnCode.ProtocolError
-                                                            shouldKeepRunning = false
-                                                        }
-
-                                                        if shouldKeepRunning {
-                                                            let payload = cp!.mqttPayload()
-                                                            var message: MqttMessage?
-                                                            if payload != nil {
-                                                                message = MqttMessage(topic:topic!,
-                                                                                      data:payload!,
-                                                                                      qos:qos!,
-                                                                                      retain:retain!)
-                                                                message!.payloadFormatIndicator = mqttProperties != nil ? mqttProperties!.payloadFormatIndicator : 0
-                                                                message!.publicationExpiryInterval = mqttProperties != nil ? mqttProperties!.publicationExpiryInterval : nil
-                                                                message!.responseTopic = mqttProperties != nil ? mqttProperties!.responseTopic : nil
-                                                                message!.correlationData = mqttProperties != nil ? mqttProperties!.correlationData : nil
-                                                                message!.contentType = mqttProperties != nil ? mqttProperties!.contentType : nil
-                                                                message!.topicAlias = mqttProperties != nil ? mqttProperties!.topicAlias : nil
-                                                                message!.subscriptionIdentifiers = mqttProperties != nil ? mqttProperties!.subscriptionIdentifiers : nil
-                                                            }
-
-                                                            if (qos == MqttQoS.AtMostOnce) {
-                                                                MqttSessions.processReceivedMessage(message: message!)
-                                                            } else if (qos == MqttQoS.AtLeastOnce) {
-                                                                MqttSessions.processReceivedMessage(message: message!)
-
-                                                                var puback = Data()
-                                                                var u : UInt8
-                                                                u = MqttControlPacketType.PUBACK.rawValue << 4
-                                                                puback.append(u)
-                                                                let pid = cp!.mqttPacketIdentifier()
-                                                                if pid != nil {
-                                                                    u = 4
-                                                                    puback.append(u)
-                                                                    puback.append(MqttControlPacket.mqttTwoByte(variable: pid!))
-                                                                    u = 0
-                                                                    puback.append(u)
-                                                                    puback.append(MqttControlPacket.mqttVariableByte(variable: 0))
-
-                                                                    mqttSession!.debug(s:"PUBACK sent", p:pid)
-                                                                    try socket.write(from: puback)
-                                                                }
-                                                            } else if (qos == MqttQoS.ExactlyOnce) {
-                                                                let pid = cp!.mqttPacketIdentifier()
-                                                                if message != nil {
-                                                                    message!.packetIdentifier = pid
-                                                                    mqttSession!.inflightIn.store(message:message!)
-                                                                }
-                                                                var pubrec = Data()
-                                                                var u : UInt8
-                                                                u = (MqttControlPacketType.PUBREC.rawValue << 4)
-                                                                pubrec.append(u)
-                                                                if pid != nil {
-                                                                    u = 4
-                                                                    pubrec.append(u)
-                                                                    pubrec.append(MqttControlPacket.mqttTwoByte(variable: pid!))
-                                                                    u = 0
-                                                                    pubrec.append(u)
-                                                                    pubrec.append(MqttControlPacket.mqttVariableByte(variable: 0))
-
-                                                                    mqttSession!.debug(s:"PUBREC sent", p:pid)
-                                                                    try socket.write(from: pubrec)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
+                                                    (shouldKeepRunning, returnCode) = mqttSession!.publish(cp:cp)
 
                                                 } else if cpt == MqttControlPacketType.PUBACK {
-                                                    mqttSession!.lastPacket = Date()
-                                                    let pid = cp!.mqttPacketIdentifier()
-                                                    mqttSession!.debug(s:"PUBACK received", p:pid)
-
-                                                    let message = mqttSession!.inflightOut.find(pid:pid)
-                                                    if message != nil {
-                                                        mqttSession!.inflightOut.remove(pid:pid)
-                                                        if mqttSession!.socket != nil {
-                                                            let message = mqttSession!.queued.get()
-                                                            if message != nil {
-                                                                mqttSession!.send(message:message)
-                                                                mqttSession!.inflightOut.store(message:message)
-                                                            }
-                                                        }
-                                                    } else {
-                                                        MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/E/puback",
-                                                                                                                 data: "\(Int(Date.init().timeIntervalSince1970)): \(mqttSession!.clientId) pid not found \(pid != nil ? pid! : -1)".data(using:String.Encoding.utf8),
-                                                                                                                 qos: .AtMostOnce,
-                                                                                                                 retain: false))
-                                                    }
+                                                    shouldKeepRunning = mqttSession!.puback(cp:cp)
 
                                                 } else if cpt == MqttControlPacketType.PUBREC {
-                                                    mqttSession!.lastPacket = Date()
-                                                    let pid = cp!.mqttPacketIdentifier()
-                                                    mqttSession!.debug(s:"PUBREC received", p:pid)
-
-                                                    let message = mqttSession!.inflightOut.find(pid:pid)
-                                                    if message != nil {
-                                                        message!.pubrel = true
-                                                        mqttSession!.inflightOut.update(message:message)
-
-                                                        var pubrel = Data()
-                                                        var u : UInt8
-                                                        u = (MqttControlPacketType.PUBREL.rawValue << 4) | 0x02
-                                                        pubrel.append(u)
-
-                                                        u = 4
-                                                        pubrel.append(u)
-                                                        pubrel.append(MqttControlPacket.mqttTwoByte(variable: pid!))
-                                                        u = 0
-                                                        pubrel.append(u)
-                                                        pubrel.append(MqttControlPacket.mqttVariableByte(variable: 0))
-
-                                                        mqttSession!.debug(s:"PUBREL sent", p:pid)
-                                                        try socket.write(from: pubrel)
-                                                    } else {
-                                                        MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/E/pubrel",
-                                                                                                                 data: "\(Int(Date.init().timeIntervalSince1970)): \(mqttSession!.clientId) pid not found \(pid != nil ? pid! : -1)".data(using:String.Encoding.utf8),
-                                                                                                                 qos: .AtMostOnce,
-                                                                                                                 retain: false))
-                                                    }
+                                                    shouldKeepRunning = mqttSession!.pubrec(cp:cp)
 
                                                 } else if cpt == MqttControlPacketType.PUBREL {
-                                                    mqttSession!.lastPacket = Date()
-                                                    let pid = cp!.mqttPacketIdentifier()
-                                                    mqttSession!.debug(s:"PUBREL received", p:pid)
-
-                                                    let message = mqttSession!.inflightIn.find(pid:pid)
-                                                    if message != nil {
-                                                        MqttSessions.processReceivedMessage(message: message!)
-                                                        mqttSession!.inflightIn.remove(pid:pid)
-
-                                                        var pubcomp = Data()
-                                                        var u : UInt8
-                                                        u = (MqttControlPacketType.PUBCOMP.rawValue << 4)
-                                                        pubcomp.append(u)
-
-                                                        u = 4
-                                                        pubcomp.append(u)
-                                                        pubcomp.append(MqttControlPacket.mqttTwoByte(variable: pid!))
-                                                        u = 0
-                                                        pubcomp.append(u)
-                                                        pubcomp.append(MqttControlPacket.mqttVariableByte(variable: 0))
-
-                                                        mqttSession!.debug(s:"PUBCOMP sent", p:pid)
-                                                        try socket.write(from: pubcomp)
-                                                    } else {
-                                                        MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/E/pubrel",
-                                                                                                                 data: "\(Int(Date.init().timeIntervalSince1970)): \(mqttSession!.clientId) pid not found \(pid != nil ? pid! : -1)".data(using:String.Encoding.utf8),
-                                                                                                                 qos: .AtMostOnce,
-                                                                                                                 retain: false))
-                                                    }
+                                                    shouldKeepRunning = mqttSession!.pubrel(cp:cp)
 
                                                 } else if (cpt == MqttControlPacketType.PUBCOMP) {
-                                                    mqttSession!.lastPacket = Date()
-                                                    let pid = cp!.mqttPacketIdentifier()
-                                                    mqttSession!.debug(s:"PUBCOMP received", p:pid)
+                                                    shouldKeepRunning = mqttSession!.pubcomp(cp:cp)
 
-                                                    let message = mqttSession!.inflightOut.find(pid:pid)
-                                                    if message != nil {
-                                                        mqttSession!.inflightOut.remove(pid:pid)
-                                                        if mqttSession!.socket != nil {
-                                                            let message = mqttSession!.queued.get()
-                                                            if message != nil {
-                                                                mqttSession!.send(message:message)
-                                                                mqttSession!.inflightOut.store(message:message)
-                                                            }
-                                                        }
-                                                    } else {
-                                                        MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/E/pubcomp",
-                                                                                                                 data: "\(Int(Date.init().timeIntervalSince1970)): \(mqttSession!.clientId) pid not found \(pid != nil ? pid! : -1)".data(using:String.Encoding.utf8),
-                                                                                                                 qos: .AtMostOnce,
-                                                                                                                 retain: false))
-                                                    }
-                                                    
-                                                    
                                                 } else if (cpt == MqttControlPacketType.SUBSCRIBE) {
-                                                    print ("SUBSCRIBE received \(cp!.mqttSubscribeTopicFilters())")
-                                                    mqttSession!.lastPacket = Date()
-                                                    
-                                                    let sf = cp!.mqttSubscribeTopicFilters()
-                                                    let p = cp!.mqttProperties()
-                                                    
-                                                    for (subscription) in sf {
-                                                        mqttSession!.store(subscription: subscription)
-                                                        MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/M/subscribe",
-                                                                                                                 data: "\(Int(Date.init().timeIntervalSince1970)): \(mqttSession!.clientId) \(subscription.qos) n=\(subscription.noLocal) r=\(subscription.retainAsPublish) \(subscription.retainHandling) i=\(subscription.subscriptionIdentifier != nil ? subscription.subscriptionIdentifier! : nil) \(subscription.topicFilter!)".data(using:String.Encoding.utf8),
-                                                                                                                 qos: .AtMostOnce,
-                                                                                                                 retain: true)
-                                                        )
-                                                        
-                                                    }
-                                                    
-                                                    var suback = Data()
-                                                    var u : UInt8
-                                                    u = (MqttControlPacketType.SUBACK.rawValue << 4)
-                                                    suback.append(u)
-                                                    
-                                                    let remainingLength = 2 + 1 + sf.count
-                                                    let remainingLengthData = MqttControlPacket.mqttVariableByte(variable: remainingLength)
-                                                    suback.append(remainingLengthData)
-                                                    
-                                                    let pid = cp!.mqttPacketIdentifier()
-                                                    if pid != nil {
-                                                        suback.append(MqttControlPacket.mqttTwoByte(variable: pid!))
-                                                    }
-                                                    u = 0
-                                                    suback.append(u)
-                                                    
-                                                    for (subscription) in cp!.mqttSubscribeTopicFilters() {
-                                                        suback.append(subscription.qos.rawValue)
-                                                    }
-                                                    
-                                                    mqttSession!.debug(s:"SUBACK sent", p:pid)
-                                                    try socket.write(from: suback)
-                                                    
+                                                    (shouldKeepRunning, returnCode) = mqttSession!.subscribe(cp:cp!)
+
                                                 } else if (cpt == MqttControlPacketType.UNSUBSCRIBE) {
-                                                    mqttSession!.debug(s:"UNSUBSCRIBE received", p:nil)
-                                                    
-                                                    mqttSession!.lastPacket = Date()
-                                                    
-                                                    let uf = cp!.mqttUnsubscribeTopicFilters()
-                                                    
-                                                    var unsuback = Data()
-                                                    var u : UInt8
-                                                    u = (MqttControlPacketType.UNSUBACK.rawValue << 4)
-                                                    unsuback.append(u)
-                                                    
-                                                    let remainingLength = 2 + 1 + uf.count
-                                                    let remainingLengthData = MqttControlPacket.mqttVariableByte(variable: remainingLength)
-                                                    unsuback.append(remainingLengthData)
-                                                    
-                                                    let pid = cp!.mqttPacketIdentifier()
-                                                    if pid != nil {
-                                                        unsuback.append(MqttControlPacket.mqttTwoByte(variable: pid!))
-                                                    }
-                                                    
-                                                    u = 0
-                                                    unsuback.append(u)
-                                                    
-                                                    for (topicFilter) in uf {
-                                                        let existingTopicFilter = mqttSession!.get(topicFilter:topicFilter)
-                                                        if existingTopicFilter == nil {
-                                                            u = MqttReturnCode.NoSubscriptionExisted.rawValue
-                                                        } else {
-                                                            mqttSession!.remove(topicFilter:topicFilter)
-                                                            u = 0
-                                                        }
-                                                        MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/M/unsubscribe",
-                                                                                                                 data: "\(Int(Date.init().timeIntervalSince1970)): \(mqttSession!.clientId) \(topicFilter)".data(using:String.Encoding.utf8),
-                                                                                                                 qos: .AtMostOnce,
-                                                                                                                 retain: true))
-                                                        
-                                                        unsuback.append(u)
-                                                    }
-                                                    
-                                                    mqttSession!.debug(s:"UNSUBACK sent", p:pid)
-                                                    try socket.write(from: unsuback)
-                                                    
+                                                    shouldKeepRunning = mqttSession!.unsubscribe(cp:cp!)
+
                                                 } else if (cpt == MqttControlPacketType.PINGREQ) {
-                                                    mqttSession!.debug(s:"PINGREQ received", p:nil)
-                                                    mqttSession!.lastPacket = Date()
-                                                    
-                                                    var pingresp = Data()
-                                                    var u : UInt8
-                                                    u = MqttControlPacketType.PINGRESP.rawValue << 4
-                                                    pingresp.append(u)
-                                                    u = 0
-                                                    pingresp.append(u)
-                                                    
-                                                    mqttSession!.debug(s:"PINGRESP received", p:nil)
-                                                    try socket.write(from: pingresp)
-                                                    
+                                                    shouldKeepRunning = mqttSession!.pingreq(cp:cp!)
+
                                                 } else if (cpt == MqttControlPacketType.DISCONNECT) {
-                                                    mqttSession!.debug(s:"DISCONNECT received", p:nil)
-                                                    mqttSession!.lastPacket = Date()
-                                                    
-                                                    let rc = cp!.mqttReturnCode()
-                                                    if rc != nil {
-                                                        if rc == MqttReturnCode.DisconnectWithWillMessage {
-                                                            mqttSession!.askForWill()
-                                                        }
-                                                    }
-                                                    
-                                                    let mqttProperties = cp!.mqttProperties()
-                                                    if mqttProperties != nil {
-                                                        if mqttProperties!.sessionExpiryInterval != nil {
-                                                            mqttSession!.sessionExpiryInterval = mqttProperties!.sessionExpiryInterval
-                                                        }
-                                                    }
-                                                    
-                                                    shouldKeepRunning = false
+                                                    shouldKeepRunning = mqttSession!.disconnect(cp:cp!)
                                                     
                                                 } else if (cpt == MqttControlPacketType.AUTH) {
-                                                    print ("AUTH received")
-                                                    mqttSession!.lastPacket = Date()
-                                                    
-                                                    shouldKeepRunning = false
+                                                    shouldKeepRunning = mqttSession!.auth(cp:cp!)
                                                 }
                                             }
                                         }
@@ -966,30 +520,37 @@ class MqttServer {
                 u = MqttControlPacketType.DISCONNECT.rawValue << 4
                 disconnect.append(u)
                 u = 0
-                if returnCode != nil {
+                if returnCode != MqttReturnCode.Success {
                     u = 1
                     disconnect.append(u)
-                    u = returnCode!.rawValue
+                    u = returnCode.rawValue
                 } else if mqttSession != nil && mqttSession!.returnCode != nil {
                     u = 1
                     disconnect.append(u)
                     u = mqttSession!.returnCode!.rawValue
                 }
                 disconnect.append(u)
+
+                /* TODO Reason String */
+                /* TODO User Properties */
                 
                 var payloadString = "\(Int(Date.init().timeIntervalSince1970)): disconnect sent"
                 MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/D",
                                                                          data: payloadString.data(using:String.Encoding.utf8),
                                                                          qos: .AtMostOnce,
-                                                                         retain: false))
-                mqttSession!.debug(s:"DISCONNECT sent \(returnCode)", p:nil)
+                                                                         retain: false),
+                                                    from:"")
+                if mqttSession != nil {
+                    mqttSession!.debug(s:"DISCONNECT sent \(returnCode)", p:nil)
+                }
                 try socket.write(from: disconnect)
                 
                 payloadString = "\(Int(Date.init().timeIntervalSince1970)): socket closed \(socket.remoteHostname):\(socket.remotePort)"
                 MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/D",
                                                                          data: payloadString.data(using:String.Encoding.utf8),
                                                                          qos: .AtMostOnce,
-                                                                         retain: false))
+                                                                         retain: false),
+                                                    from:"")
                 socket.close()
                 
                 if mqttSession != nil {
@@ -1005,15 +566,16 @@ class MqttServer {
                     print("Unexpected error by connection at \(socket.remoteHostname):\(socket.remotePort)...")
                     return
                 }
-                if self.continueRunning {
-                    print("Error reported by connection at \(socket.remoteHostname):\(socket.remotePort):\n \(socketError.description)")
-                    socket.close()
-                    if mqttSession != nil {
-                        mqttSession!.socket = nil
-                    }
+                print("Error reported by connection at \(socket.remoteHostname):\(socket.remotePort):\n \(socketError.description)")
+                socket.close()
+                if mqttSession != nil {
+                    mqttSession!.socket = nil
                 }
             }
         }
     }
-    
+
 }
+
+
+

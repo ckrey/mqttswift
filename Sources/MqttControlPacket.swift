@@ -262,11 +262,9 @@ class MqttControlPacket {
                     pll != nil {
                     var p = Data()
                     let end = rl! + 1 + rll! - 1
-                    var start: Int
+                    var start = 1 + rll! + 2 + tl! + pll! + pl!
                     if pid != nil {
-                        start = 1 + rll! + 2 + tl! + 2 + pll!
-                    } else {
-                        start = 1 + rll! + 2 + tl! + pll!
+                        start += 2
                     }
                     //print ("Payload bounds \(start) \(end)")
                     if start <= end {
@@ -373,7 +371,7 @@ class MqttControlPacket {
         }
     }
 
-    func mqttSubscribeTopicFilters() -> [MqttSubscription] {
+    func mqttSubscriptions() -> [MqttSubscription] {
         var stf = [MqttSubscription]()
 
         var payload = self.mqttPayload()
@@ -391,11 +389,12 @@ class MqttControlPacket {
                     }
                     let subscription = MqttSubscription()
                     subscription.topicFilter = String(data: stringData, encoding: String.Encoding.utf8)
-                    let byte = payload![position + 2 + stringLength]
-                    subscription.qos = MqttQoS(rawValue: byte & 0x03)!
-                    subscription.noLocal = (byte & 0x04 != 0)
-                    subscription.retainAsPublish = (byte & 0x08 != 0)
-                    subscription.retainHandling = MqttRetainHandling(rawValue: (byte & 0x30) >> 4)!
+                    subscription.subscribeOptions = payload![position + 2 + stringLength]
+                    subscription.qos = MqttQoS(rawValue: subscription.subscribeOptions & 0x03)!
+                    subscription.noLocal = (subscription.subscribeOptions & 0x04 != 0)
+                    subscription.retainAsPublish = (subscription.subscribeOptions & 0x08 != 0)
+                    subscription.retainHandling = MqttRetainHandling(rawValue: (subscription.subscribeOptions & 0x30) >> 4)!
+
                     if self.mqttProperties() != nil && self.mqttProperties()!.subscriptionIdentifiers != nil {
                         subscription.subscriptionIdentifier = self.mqttProperties()!.subscriptionIdentifiers![0]
                     }

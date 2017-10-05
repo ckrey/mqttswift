@@ -1,7 +1,7 @@
 import Foundation
 
 class MqttProperties {
-    var payloadFormatIndicator: UInt8 = 0x00
+    var payloadFormatIndicator: UInt8? = nil
     var publicationExpiryInterval: Int? = nil
     var contentType: String? = nil
     var responseTopic: String? = nil

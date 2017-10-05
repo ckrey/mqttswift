@@ -24,6 +24,7 @@ enum MqttReturnCode: UInt8 {
     case PacketIdentifierInUse = 145
     case PacketIdentifierNotFound = 146
     case ReceiveMaximumExceeded = 147
+    case TopicAliasInvalid = 148
     case PacketTooLarge = 149
     case MessageRateTooHigh = 150
     case QuotaExceeded = 151

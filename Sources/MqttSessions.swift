@@ -41,32 +41,52 @@ class MqttSessions {
 		return mqttSession;
 	}
 
-    class func processReceivedMessage(message: MqttMessage) {
+    class func processReceivedMessage(message: MqttMessage, from: String) {
 
         if message.retain {
             MqttRetained.sharedInstance().store(message:message)
         }
 
         for (_, mqttSession) in MqttSessions.sharedInstance().sessions {
+            let aMessage = MqttMessage()
+            aMessage.topic = message.topic
+            aMessage.data = message.data
+            aMessage.qos = message.qos
+            aMessage.retain = message.retain
+            aMessage.payloadFormatIndicator = message.payloadFormatIndicator
+            aMessage.publicationExpiryInterval = message.publicationExpiryInterval
+            aMessage.responseTopic = message.responseTopic
+            aMessage.correlationData = message.correlationData
+            aMessage.userProperties = message.userProperties
+            aMessage.contentType = message.contentType
+            aMessage.topicAlias = message.topicAlias
+            aMessage.contentType = message.contentType
+            aMessage.subscriptionIdentifiers = message.subscriptionIdentifiers
+
             var matches = false;
             for (_, subscription) in mqttSession.subscriptions {
                 if self.matches(topic:message.topic, topicFilter:subscription.topicFilter) {
+                    if subscription.noLocal && from == mqttSession.clientId {
+                        MqttCompliance.sharedInstance().log(target: "MQTT-3.8.3-3")
+                        continue;
+                    }
                     matches = true;
-                    if message.qos.rawValue > subscription.qos.rawValue {
-                        message.qos = subscription.qos
+                    if aMessage.qos.rawValue > subscription.qos.rawValue {
+                        MqttCompliance.sharedInstance().log(target: "MQTT-3.8.4-8")
+                        aMessage.qos = subscription.qos
                     }
                     if subscription.subscriptionIdentifier != nil {
-                        if message.subscriptionIdentifiers == nil {
-                            message.subscriptionIdentifiers = [Int]()
+                        if aMessage.subscriptionIdentifiers == nil {
+                            aMessage.subscriptionIdentifiers = [Int]()
                         }
-                        message.subscriptionIdentifiers!.append(subscription.subscriptionIdentifier!)
+                        aMessage.subscriptionIdentifiers!.append(subscription.subscriptionIdentifier!)
                     }
                 }
             }
 
             if matches {
                 DispatchQueue.main.async {
-                    mqttSession.publish(message:message)
+                    mqttSession.publish(message:aMessage)
                 }
             }
         }
@@ -93,8 +113,11 @@ class MqttSessions {
                     topicFilterComponent = topicFilterComponent + 1
 
                 } else if topicComponents[topicComponent] == topicFilterComponents[topicFilterComponent] {
+                    MqttCompliance.sharedInstance().log(target: "MQTT-4.7.3-4")
+
                     topicComponent = topicComponent + 1
                     topicFilterComponent = topicFilterComponent + 1
+
                 } else {
                     return false
                 }
@@ -155,7 +178,8 @@ class MqttSessions {
         MqttSessions.processReceivedMessage(message: MqttMessage(topic: topic,
                                                                  data: payload.data(using:String.Encoding.utf8),
                                                                  qos: .AtMostOnce,
-                                                                 retain: true))
+                                                                 retain: true),
+                                            from:"")
     }
 }
 
