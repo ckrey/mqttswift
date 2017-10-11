@@ -15,6 +15,7 @@ class MqttMessage {
     var retain: Bool = false
     var payloadFormatIndicator: UInt8? = nil
     var publicationExpiryInterval : Int? = nil
+    var publicationExpiryTime : Date? = nil
     var responseTopic: String? = nil
     var correlationData: Data? = nil
     var userProperties: [[String: String]]? = nil

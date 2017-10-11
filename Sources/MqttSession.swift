@@ -166,10 +166,15 @@ class MqttSession {
             }
         }
         self.subscriptions[subscription.topicFilter] = subscription
+        MqttSharedSubscriptions.sharedInstance().store(subscription:subscription)
     }
 
     func remove(topicFilter: String) {
-        self.subscriptions[topicFilter] = nil
+        let existingSubscription = self.get(topicFilter:topicFilter)
+        if existingSubscription != nil {
+            MqttSharedSubscriptions.sharedInstance().remove(subscription:existingSubscription!)
+            self.subscriptions[topicFilter] = nil
+        }
     }
 
     func get(topicFilter: String) -> MqttSubscription? {
@@ -956,8 +961,12 @@ class MqttSession {
                 print("Unexpected error by connection at \(self.socket!.remoteHostname):\(self.socket!.remotePort)...")
                 return false
             }
-            print("Error reported by connection at \(self.socket!.remoteHostname):\(self.socket!.remotePort):\n \(socketError.description)")
-            self.socket!.close()
+            if self.socket != nil {
+                print("Error reported by connection at \(self.socket!.remoteHostname):\(self.socket!.remotePort):\n \(socketError.description)")
+                self.socket!.close()
+            } else {
+                print("Error reported by connection at \(socketError.description)")
+            }
             self.socket = nil
             return false
         }

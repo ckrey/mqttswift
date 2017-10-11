@@ -34,6 +34,7 @@
 		848368051F7298FB00914F4B /* MqttSubscription.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttSubscription.swift; sourceTree = "<group>"; };
 		848A14F71E76774700E15ABB /* Package.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Package.swift; sourceTree = "<group>"; };
 		848A14F91E76774700E15ABB /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		848DAB6A1F8A9C0100D97927 /* MqttSharedSubscriptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttSharedSubscriptions.swift; sourceTree = "<group>"; };
 		84AC1C731F6E55E70091596D /* MqttInflight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttInflight.swift; sourceTree = "<group>"; };
 		84AC1C741F6FA6470091596D /* MqttQueued.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttQueued.swift; sourceTree = "<group>"; };
 		84AC1C751F6FA6CF0091596D /* MqttMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MqttMessage.swift; sourceTree = "<group>"; };
@@ -73,6 +74,7 @@
 				84DAE1A01E932E1D00B98C3D /* MqttReturnCode.swift */,
 				84387A4B1E7BCCB900FEF9AC /* MqttSession.swift */,
 				84387A4C1E7BCCB900FEF9AC /* MqttSessions.swift */,
+				848DAB6A1F8A9C0100D97927 /* MqttSharedSubscriptions.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";

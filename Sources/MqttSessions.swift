@@ -8,6 +8,7 @@ class MqttSessions {
 
     var droppedQoS0Messages: Int
     var sentMessages: Int
+    var shareRoundRobin : Int
 
     public class func sharedInstance() -> MqttSessions {
         if theInstance == nil {
@@ -21,6 +22,7 @@ class MqttSessions {
 		self.sessions = [String: MqttSession]()
         self.droppedQoS0Messages = 0
         self.sentMessages = 0
+        self.shareRoundRobin = 0
 	}
 
     func remove(session: MqttSession) {
@@ -42,6 +44,10 @@ class MqttSessions {
 	}
 
     class func processReceivedMessage(message: MqttMessage, from: String) {
+
+        if message.publicationExpiryInterval != nil {
+            message.publicationExpiryTime = Date(timeIntervalSinceNow:TimeInterval(message.publicationExpiryInterval!))
+        }
 
         if message.retain {
             MqttRetained.sharedInstance().store(message:message)
@@ -65,21 +71,29 @@ class MqttSessions {
 
             var matches = false;
             for (_, subscription) in mqttSession.subscriptions {
-                if self.matches(topic:message.topic, topicFilter:subscription.topicFilter) {
-                    if subscription.noLocal && from == mqttSession.clientId {
-                        MqttCompliance.sharedInstance().log(target: "MQTT-3.8.3-3")
-                        continue;
-                    }
-                    matches = true;
-                    if aMessage.qos.rawValue > subscription.qos.rawValue {
-                        MqttCompliance.sharedInstance().log(target: "MQTT-3.8.4-8")
-                        aMessage.qos = subscription.qos
-                    }
-                    if subscription.subscriptionIdentifier != nil {
-                        if aMessage.subscriptionIdentifiers == nil {
-                            aMessage.subscriptionIdentifiers = [Int]()
+                if MqttSessions.sharedInstance().shareRoundRobin %
+                    MqttSharedSubscriptions.sharedInstance().position(subscription: subscription) == 0 {
+                    MqttSessions.sharedInstance().shareRoundRobin += 1
+
+                    if self.matches(topic:message.topic, topicFilter:subscription.netTopicFilter()) {
+                        if subscription.noLocal && from == mqttSession.clientId {
+                            MqttCompliance.sharedInstance().log(target: "MQTT-3.8.3-3")
+                            continue;
                         }
-                        aMessage.subscriptionIdentifiers!.append(subscription.subscriptionIdentifier!)
+                        matches = true;
+                        if !subscription.retainAsPublish {
+                            aMessage.retain = false
+                        }
+                        if aMessage.qos.rawValue > subscription.qos.rawValue {
+                            MqttCompliance.sharedInstance().log(target: "MQTT-3.8.4-8")
+                            aMessage.qos = subscription.qos
+                        }
+                        if subscription.subscriptionIdentifier != nil {
+                            if aMessage.subscriptionIdentifiers == nil {
+                                aMessage.subscriptionIdentifiers = [Int]()
+                            }
+                            aMessage.subscriptionIdentifiers!.append(subscription.subscriptionIdentifier!)
+                        }
                     }
                 }
             }
@@ -91,10 +105,11 @@ class MqttSessions {
             }
         }
     }
-    
+
+
     class func matches(topic: String, topicFilter: String) -> Bool {
         let topicComponents = topic.components(separatedBy: "/");
-        let topicFilterComponents = topicFilter.components(separatedBy: "/");
+        var topicFilterComponents = topicFilter.components(separatedBy: "/");
 
         var topicComponent = 0;
         var topicFilterComponent = 0;

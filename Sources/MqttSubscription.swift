@@ -33,4 +33,28 @@ class MqttSubscription {
         self.retainAsPublish = retainAsPublish
         self.subscriptionIdentifier = subscriptionIdentifier
     }
+
+    func isShared() -> Bool {
+        var topicFilterComponents = self.topicFilter.components(separatedBy: "/");
+        return topicFilterComponents.count >= 3 && topicFilterComponents[0] == "$share"
+    }
+
+    func shareName() -> String? {
+        var topicFilterComponents = self.topicFilter.components(separatedBy: "/");
+
+        if topicFilterComponents.count >= 3 && topicFilterComponents[0] == "$share" {
+            return topicFilterComponents[1]
+        }
+        return nil
+    }
+
+    func netTopicFilter() -> String {
+        var topicFilterComponents = self.topicFilter.components(separatedBy: "/");
+
+        if topicFilterComponents.count >= 3 && topicFilterComponents[0] == "$share" {
+            topicFilterComponents.removeFirst()
+            topicFilterComponents.removeFirst()
+        }
+        return topicFilterComponents.joined(separator:"/")
+    }
 }
