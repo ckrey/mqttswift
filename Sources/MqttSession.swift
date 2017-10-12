@@ -586,6 +586,7 @@ class MqttSession {
             message!.correlationData = mqttProperties != nil ? mqttProperties!.correlationData : nil
             message!.contentType = mqttProperties != nil ? mqttProperties!.contentType : nil
             message!.topicAlias = mqttProperties != nil ? mqttProperties!.topicAlias : nil
+            message!.userProperties = mqttProperties != nil ? mqttProperties!.userProperties : nil
             message!.subscriptionIdentifiers = mqttProperties != nil ? mqttProperties!.subscriptionIdentifiers : nil
         }
 
