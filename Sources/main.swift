@@ -8,6 +8,7 @@ var maximumQoS = MqttQoS.AtMostOnce
 var maximumClientIdLength = 23
 var restrictedClientId = true
 var receiveMaximum = 1
+var maximumSessionExpiryInterval = 0
 var maximumPacketSize = 10000
 var topicAliasMaximum = 0
 var wildcardSubscritionAvailable = false
@@ -50,6 +51,14 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:
                 let p = Int(s!)
                 if p != nil {
                     serverKeepAlive = p!
+                }
+            }
+        case "e":
+            let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
+            if s != nil {
+                let p = Int(s!)
+                if p != nil {
+                    maximumSessionExpiryInterval = p!
                 }
             }
         case "P":
@@ -129,6 +138,7 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:
             print("Usage \(command) [Options]")
             print("\t-a allow anonymous (default off)")
             print("\t-c do not restrict Client ID to charactes and letters (default on)")
+            print("\t-e max session expiry interval (default 0)")
             print("\t-i subscription identifiers available (default off)")
             print("\t-k server keep alive (default none)")
             print("\t-M server server moved (default none)")
@@ -163,6 +173,7 @@ if verbose {
     print("\tmaximumQoS \(maximumQoS)")
     print("\tmaximumClientIdLength \(maximumClientIdLength)")
     print("\trestrictedClientId \(restrictedClientId)")
+    print("\tmaximumSessionExpiryInterval \(receiveMaximum)")
     print("\treceiveMaximum \(receiveMaximum)")
     print("\tmaximumPacketSize \(maximumPacketSize)")
     print("\ttopicAliasMaximum \(topicAliasMaximum)")
@@ -186,6 +197,7 @@ let server = MqttServer(verbose: verbose,
                         maximumQoS: maximumQoS,
                         maximumClientIdLength: maximumClientIdLength,
                         restrictedClientId: restrictedClientId,
+                        maximumSessionExpiryInterval: maximumSessionExpiryInterval,
                         receiveMaximum: receiveMaximum,
                         maximumPacketSize: maximumPacketSize,
                         topicAliasMaximum: topicAliasMaximum,

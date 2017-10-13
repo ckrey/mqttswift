@@ -9,6 +9,7 @@ class MqttSession {
     var serverKeepAlive: Int
     var willDelayInterval: Int
     var sessionExpiryInterval: Int?
+    var maximumSessionExpiryInterval: Int
     var maximumPacketSize: Int?
     var willFlag: Bool
     var willTopic: String?
@@ -54,6 +55,7 @@ class MqttSession {
         self.serverKeepAlive = 60
         self.willDelayInterval = 0
         self.sessionExpiryInterval = nil
+        self.maximumSessionExpiryInterval = 0
         
         self.willFlag = false
         self.willTopic = nil
@@ -349,7 +351,7 @@ class MqttSession {
         } else {
             self.topicAliasMaximumOut = 0
         }
-        self.topicAliasMaximumIn = MqttServer.sharedInstance().topicAliasMaximum;
+        self.topicAliasMaximumIn = MqttServer.sharedInstance().topicAliasMaximum
 
         if mqttProperties != nil {
             if (mqttProperties!.willDelayInterval != nil) {
@@ -360,6 +362,7 @@ class MqttSession {
             } else {
                 self.sessionExpiryInterval = 0
             }
+            self.maximumSessionExpiryInterval = MqttServer.sharedInstance().maximumSessionExpiryInterval
 
             /* Maximum Packet Size */
             if (mqttProperties!.maximumPacketSize != nil) {
@@ -377,6 +380,7 @@ class MqttSession {
 
         self.connectKeepAlive = cp!.mqttConnectKeepAlive()!
         self.serverKeepAlive = cp!.mqttConnectKeepAlive()!
+
         var connack = Data()
         var u : UInt8
         u = MqttControlPacketType.CONNACK.rawValue << 4
@@ -448,6 +452,20 @@ class MqttSession {
             u = MqttPropertyIdentifier.ServerKeepAlive.rawValue
             remaining.append(u)
             remaining.append(MqttControlPacket.mqttTwoByte(variable: self.serverKeepAlive))
+        }
+
+        if mqttProperties != nil &&
+            mqttProperties!.topicAliasMaximum != nil &&
+            mqttProperties!.topicAliasMaximum! > 0 {
+            self.topicAliasMaximumOut =  mqttProperties!.topicAliasMaximum!
+        } else {
+            self.topicAliasMaximumOut = 0
+        }
+
+        if (self.sessionExpiryInterval! != self.maximumSessionExpiryInterval) {
+            u = MqttPropertyIdentifier.SessionExpiryInterval.rawValue
+            remaining.append(u)
+            remaining.append(MqttControlPacket.mqttFourByte(variable: self.maximumSessionExpiryInterval))
         }
 
         if (MqttServer.sharedInstance().serverMoved != nil) {

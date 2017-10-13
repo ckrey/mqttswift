@@ -18,6 +18,7 @@ class MqttServer {
     let maximumQoS: MqttQoS
     let maximumClientIdLength: Int
     let restrictedClientId: Bool
+    let maximumSessionExpiryInterval: Int
     let receiveMaximum: Int
     let maximumPacketSize: Int
     let topicAliasMaximum: Int
@@ -45,6 +46,7 @@ class MqttServer {
          maximumQoS: MqttQoS = MqttQoS.AtMostOnce,
          maximumClientIdLength: Int = 23,
          restrictedClientId: Bool = true,
+         maximumSessionExpiryInterval: Int = 0,
          receiveMaximum: Int = 1,
          maximumPacketSize: Int = 2684354565,
          topicAliasMaximum: Int = 0,
@@ -65,6 +67,7 @@ class MqttServer {
         self.maximumQoS = maximumQoS
         self.maximumClientIdLength = maximumClientIdLength
         self.restrictedClientId = restrictedClientId
+        self.maximumSessionExpiryInterval = maximumSessionExpiryInterval
         self.receiveMaximum = receiveMaximum
         self.maximumPacketSize = maximumPacketSize
         self.topicAliasMaximum = topicAliasMaximum
