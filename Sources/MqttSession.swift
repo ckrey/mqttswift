@@ -357,6 +357,8 @@ class MqttSession {
             }
             if (mqttProperties!.sessionExpiryInterval != nil) {
                 self.sessionExpiryInterval = mqttProperties!.sessionExpiryInterval!
+            } else {
+                self.sessionExpiryInterval = 0
             }
 
             /* Maximum Packet Size */
