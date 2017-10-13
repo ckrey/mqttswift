@@ -4,19 +4,19 @@ class MqttControlPacket {
     var array: [UInt8]
     let max: Int
     var processed : Int
-
+    
     init(max: Int) {
         self.max = max
         self.processed = 0
         self.array = [UInt8]()
     }
-
+    
     func process(byte: UInt8) -> (Bool, MqttReturnCode?) {
         self.processed = self.processed + 1
         if self.processed <= self.max {
             self.array.append(byte)
         }
-
+        
         if self.complete() {
             //print ("MqttControlPacket complete", terminator: ": ")
             var end = 31
@@ -31,24 +31,24 @@ class MqttControlPacket {
             } else {
                 print ()
             }
-
-//            let cpt = self.mqttControlPacketType()
-//            let dup = self.mqttControlPacketDup()
-//            let qos = self.mqttControlPacketQoS()
-//            let retain = self.mqttControlPacketRetain()
-//            let pid = self.mqttPacketIdentifier()
-//            print(String(format:"MqttControlPacket: %02x d%d q%d r%d p%d",
-//                         cpt!.rawValue,
-//                         dup! ? 1 : 0,
-//                         qos!.rawValue,
-//                         retain! ? 1 : 0,
-//                         pid != nil ? pid! : -1))
+            
+            //            let cpt = self.mqttControlPacketType()
+            //            let dup = self.mqttControlPacketDup()
+            //            let qos = self.mqttControlPacketQoS()
+            //            let retain = self.mqttControlPacketRetain()
+            //            let pid = self.mqttPacketIdentifier()
+            //            print(String(format:"MqttControlPacket: %02x d%d q%d r%d p%d",
+            //                         cpt!.rawValue,
+            //                         dup! ? 1 : 0,
+            //                         qos!.rawValue,
+            //                         retain! ? 1 : 0,
+            //                         pid != nil ? pid! : -1))
             return (true, MqttReturnCode.Success)
         } else {
             let cpt = self.mqttControlPacketType()
             let rl = self.mqttRemainingLength()
             let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+            
             if cpt != nil &&
                 rl != nil &&
                 rll != nil &&
@@ -59,12 +59,12 @@ class MqttControlPacket {
             }
         }
     }
-
+    
     func complete() -> Bool {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if cpt != nil &&
             rl != nil &&
             rll != nil &&
@@ -74,11 +74,11 @@ class MqttControlPacket {
             return false
         }
     }
-
+    
     func mqttRemainingLength() -> Int? {
         return self.mqttVariableByteInteger(start: 1)
     }
-
+    
     func mqttVariableByteInteger(start: Int) -> Int? {
         var multiplier : Int = 1
         var pos = start
@@ -98,7 +98,7 @@ class MqttControlPacket {
         } while ((encodedByte & 128) != 0)
         return value
     }
-
+    
     func mqttFourByteInteger(start: Int) -> Int? {
         var value : Int?
         if start + 3 < self.array.count {
@@ -109,7 +109,7 @@ class MqttControlPacket {
         }
         return value
     }
-
+    
     func mqttTwoByteInteger(start: Int) -> Int? {
         var value : Int?
         if start + 1 < self.array.count {
@@ -118,12 +118,12 @@ class MqttControlPacket {
         }
         return value
     }
-
+    
     func mqttTopicLength() -> Int? {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() &&
             cpt == MqttControlPacketType.PUBLISH &&
             rl != nil && rl! >= 2 &&
@@ -133,12 +133,12 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttTopic() -> String? {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() &&
             cpt == MqttControlPacketType.PUBLISH &&
             rl != nil && rl! >= 2 &&
@@ -148,7 +148,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttUtf8String(start: Int) -> String? {
         let td = self.mqttBinaryData(start: start)
         if td == nil {
@@ -158,7 +158,7 @@ class MqttControlPacket {
             return t
         }
     }
-
+    
     func mqttBinaryData(start: Int) -> Data? {
         let l = self.mqttTwoByteInteger(start: start)
         if l == nil {
@@ -176,12 +176,12 @@ class MqttControlPacket {
         }
         return td
     }
-
+    
     func mqttPropertyLength() -> (Int?, Int?) {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() {
             if cpt! == MqttControlPacketType.CONNECT {
                 return (self.mqttVariableByteInteger(start: 1 + rll! + 10), 1 + rll! + 10)
@@ -199,6 +199,8 @@ class MqttControlPacket {
                 }
             } else if cpt! == MqttControlPacketType.SUBSCRIBE {
                 return (self.mqttVariableByteInteger(start: 1 + rll! + 2), 1 + rll! + 2)
+            } else if cpt! == MqttControlPacketType.UNSUBSCRIBE {
+                return (self.mqttVariableByteInteger(start: 1 + rll! + 2), 1 + rll! + 2)
             } else if cpt! == MqttControlPacketType.DISCONNECT {
                 return (self.mqttVariableByteInteger(start: 1 + rll! + 1), 1 + rll! + 1)
             } else {
@@ -213,7 +215,7 @@ class MqttControlPacket {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() {
             if cpt! == MqttControlPacketType.DISCONNECT {
                 var returnCode : MqttReturnCode = .Success
@@ -227,12 +229,12 @@ class MqttControlPacket {
         }
         return nil
     }
-
+    
     func mqttPayload() -> Data? {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() {
             if cpt! == MqttControlPacketType.CONNECT {
                 let (pl, _) = self.mqttPropertyLength()
@@ -295,17 +297,23 @@ class MqttControlPacket {
                     return nil
                 }
             } else if cpt! == MqttControlPacketType.UNSUBSCRIBE {
-                var p = Data()
-                let end = rl! + 1 + rll! - 1
-                var start: Int
-                start = 1 + rll! + 2
-                //print ("Payload bounds \(start) \(end)")
-                if start <= end {
-                    for i in start ... end {
-                        p.append(&self.array[i], count: 1)
+                let (pl, _) = self.mqttPropertyLength()
+                let pll = MqttControlPacket.mqttVariableByteIntegerLength(variable: pl)
+                if pll != nil {
+                    var p = Data()
+                    let end = rl! + 1 + rll! - 1
+                    var start: Int
+                    start = 1 + rll! + 2 + pll! + pl!
+                    //print ("Payload bounds \(start) \(end)")
+                    if start <= end {
+                        for i in start ... end {
+                            p.append(&self.array[i], count: 1)
+                        }
                     }
+                    return p
+                } else {
+                    return nil
                 }
-                return p
             } else {
                 return nil
             }
@@ -313,12 +321,12 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttClientId() -> String? {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() {
             if cpt! == MqttControlPacketType.CONNECT {
                 let (pl, _) = self.mqttPropertyLength()
@@ -331,7 +339,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttConnectStringField(position: Int) -> String? {
         let d = self.mqttConnectDataField(position: position)
         if d != nil {
@@ -341,12 +349,12 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttConnectDataField(position: Int) -> Data? {
         let cpt = self.mqttControlPacketType()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
-
+        
         if self.complete() {
             if cpt! == MqttControlPacketType.CONNECT {
                 let (pl, _) = self.mqttPropertyLength()
@@ -370,10 +378,10 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttSubscriptions() -> [MqttSubscription] {
         var stf = [MqttSubscription]()
-
+        
         var payload = self.mqttPayload()
         if payload != nil {
             var position = 0
@@ -394,7 +402,7 @@ class MqttControlPacket {
                     subscription.noLocal = (subscription.subscribeOptions & 0x04 != 0)
                     subscription.retainAsPublish = (subscription.subscribeOptions & 0x08 != 0)
                     subscription.retainHandling = MqttRetainHandling(rawValue: (subscription.subscribeOptions & 0x30) >> 4)!
-
+                    
                     if self.mqttProperties() != nil && self.mqttProperties()!.subscriptionIdentifiers != nil {
                         subscription.subscriptionIdentifier = self.mqttProperties()!.subscriptionIdentifiers![0]
                     }
@@ -407,7 +415,7 @@ class MqttControlPacket {
         }
         return stf
     }
-
+    
     func mqttUnsubscribeTopicFilters() -> [String] {
         var utf = [String]()
         var payload = self.mqttPayload()
@@ -435,12 +443,12 @@ class MqttControlPacket {
         }
         return utf
     }
-
+    
     func mqttProperties() -> MqttProperties? {
         let (pl, ppos) = self.mqttPropertyLength()
         let pll = MqttControlPacket.mqttVariableByteIntegerLength(variable: pl)
         let mqttProperties = MqttProperties()
-
+        
         if pl != nil && pll != nil {
             var remaining = pl! - pll!
             while remaining > 0 {
@@ -450,126 +458,126 @@ class MqttControlPacket {
                     mqttProperties.payloadFormatIndicator = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.PublicationExpiryInterval.rawValue:
                     mqttProperties.publicationExpiryInterval = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
-
+                    
                 case MqttPropertyIdentifier.ContentType.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.contentType = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.ResponseTopic.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.responseTopic = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.CorrelationData.rawValue:
                     let binaryLength = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.correlationData = self.mqttBinaryData(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - binaryLength!
                     break
-
+                    
                 case MqttPropertyIdentifier.SubscriptionIdentifier.rawValue:
                     let subscriptionIdentifier = self.mqttVariableByteInteger(start: ppos! + pl! - remaining + 1)
                     if mqttProperties.subscriptionIdentifiers == nil {
                         mqttProperties.subscriptionIdentifiers = [Int]()
                     }
                     mqttProperties.subscriptionIdentifiers!.append(subscriptionIdentifier!)
-
+                    
                     remaining = remaining - MqttControlPacket.mqttVariableByteIntegerLength(variable: subscriptionIdentifier)!
                     break
-
+                    
                 case MqttPropertyIdentifier.SessionExpiryInterval.rawValue:
                     mqttProperties.sessionExpiryInterval = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
-
+                    
                 case MqttPropertyIdentifier.AssignedClientIdentifier.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.assignedClientIdentifier = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.ServerKeepAlive.rawValue:
                     mqttProperties.serverKeepAlive = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
-
+                    
                 case MqttPropertyIdentifier.AuthMethod.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.authMethod = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.AuthData.rawValue:
                     let binaryLength = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.authData = self.mqttBinaryData(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - binaryLength!
                     break;
-
+                    
                 case MqttPropertyIdentifier.RequestProblemInformation.rawValue:
                     mqttProperties.requestProblemInformation = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.WillDelayInterval.rawValue:
                     mqttProperties.willDelayInterval = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
-
+                    
                 case MqttPropertyIdentifier.RequestResponseInformation.rawValue:
                     mqttProperties.requestResponseInformation = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.ResponseInformation.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.responseInformation = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.ServerReference.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.serverReference = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.ReasonString.rawValue:
                     let utf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     mqttProperties.reasonString = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2 - utf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.ReceiveMaximum.rawValue:
                     mqttProperties.receiveMaximum = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
-
+                    
                 case MqttPropertyIdentifier.TopicAliasMaximum.rawValue:
                     mqttProperties.topicAliasMaximum = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
-
+                    
                 case MqttPropertyIdentifier.TopicAlias.rawValue:
                     mqttProperties.topicAlias = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 2
                     break
-
+                    
                 case MqttPropertyIdentifier.MaximumQoS.rawValue:
                     mqttProperties.maximumQoS = MqttQoS(rawValue:self.array[ppos! + pl! - remaining + 1])
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.RetainAvailable.rawValue:
                     mqttProperties.retainAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.UserProperty.rawValue:
                     let keyUtf8Length = self.mqttTwoByteInteger(start: ppos! + pl! - remaining + 1)
                     let key = self.mqttUtf8String(start: ppos! + pl! - remaining + 1)
@@ -581,22 +589,22 @@ class MqttControlPacket {
                     mqttProperties.userProperties!.append([key!: value!])
                     remaining = remaining - 2 - keyUtf8Length! - 2 - valueUtf8Length!
                     break
-
+                    
                 case MqttPropertyIdentifier.MaximumPacketSize.rawValue:
                     mqttProperties.maximumPacketSize = self.mqttFourByteInteger(start: ppos! + pl! - remaining + 1)
                     remaining = remaining - 4
                     break
-
+                    
                 case MqttPropertyIdentifier.WildcardSubscriptionAvailable.rawValue:
                     mqttProperties.wildcardSubscriptionAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.SubscriptionIdentifiersAvailable.rawValue:
                     mqttProperties.subscriptionIdentifiersAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
                     break
-
+                    
                 case MqttPropertyIdentifier.SharedSubscriptionAvailable.rawValue:
                     mqttProperties.sharedSubscriptionAvailable = self.array[ppos! + pl! - remaining + 1]
                     remaining = remaining - 1
@@ -610,14 +618,14 @@ class MqttControlPacket {
         }
         return mqttProperties
     }
-
+    
     func mqttPacketIdentifier() -> Int? {
         let tl = self.mqttTopicLength()
         let qos = self.mqttControlPacketQoS()
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
         let cpt = self.mqttControlPacketType()
-
+        
         if self.complete() {
             if cpt != nil {
                 if cpt == MqttControlPacketType.PUBLISH {
@@ -648,7 +656,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     static func mqttVariableByteIntegerLength(variable: Int?) -> Int? {
         var l : Int?
         if variable != nil {
@@ -664,7 +672,7 @@ class MqttControlPacket {
         }
         return l
     }
-
+    
     static func mqttVariableByte(variable: Int) -> Data {
         var d = Data()
         var v = variable
@@ -679,7 +687,7 @@ class MqttControlPacket {
         } while v > 0
         return d
     }
-
+    
     static func mqttUtf8(variable: String) -> Data {
         var d = Data()
         let sd = variable.data(using: String.Encoding.utf8)
@@ -687,7 +695,7 @@ class MqttControlPacket {
         d.append(sd!)
         return d
     }
-
+    
     static func mqttFourByte(variable: Int) -> Data {
         var d = Data()
         var u: UInt8
@@ -701,7 +709,7 @@ class MqttControlPacket {
         d.append(u)
         return d
     }
-
+    
     static func mqttTwoByte(variable: Int) -> Data {
         var d = Data()
         var u: UInt8
@@ -711,7 +719,7 @@ class MqttControlPacket {
         d.append(u)
         return d
     }
-
+    
     func mqttProtocolName() -> String? {
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
@@ -723,7 +731,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttProtocolVersion() -> UInt8? {
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
@@ -739,7 +747,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttConnectKeepAlive() -> Int? {
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
@@ -755,7 +763,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttConnectFlags() -> UInt8? {
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
@@ -771,7 +779,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttKeepAlive() -> Int? {
         let rl = self.mqttRemainingLength()
         let rll = MqttControlPacket.mqttVariableByteIntegerLength(variable: rl)
@@ -787,7 +795,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttControlPacketType() -> MqttControlPacketType? {
         if self.array.count > 0 {
             let cpt = self.array[0] >> 4
@@ -796,7 +804,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttControlPacketDup() -> Bool? {
         if self.array.count > 0 {
             let dup = (self.array[0] >> 3) & 1
@@ -805,7 +813,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttControlPacketQoS() -> MqttQoS? {
         if self.array.count > 0 {
             let qos = ((self.array[0] >> 1) & 3)
@@ -818,7 +826,7 @@ class MqttControlPacket {
             return nil
         }
     }
-
+    
     func mqttControlPacketRetain() -> Bool? {
         if self.array.count > 0 {
             return ((self.array[0] & 1) == 1)
