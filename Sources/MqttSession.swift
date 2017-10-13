@@ -9,7 +9,7 @@ class MqttSession {
     var serverKeepAlive: Int
     var willDelayInterval: Int
     var sessionExpiryInterval: Int?
-    var maximumSessionExpiryInterval: Int
+    var serverSessionExpiryInterval: Int
     var maximumPacketSize: Int?
     var willFlag: Bool
     var willTopic: String?
@@ -55,7 +55,7 @@ class MqttSession {
         self.serverKeepAlive = 60
         self.willDelayInterval = 0
         self.sessionExpiryInterval = nil
-        self.maximumSessionExpiryInterval = 0
+        self.serverSessionExpiryInterval = 0
         
         self.willFlag = false
         self.willTopic = nil
@@ -100,13 +100,9 @@ class MqttSession {
                 }
             } else {
                 if !deleted {
-                    if self.sessionExpiryInterval != nil {
-                        if self.pendingDeleteAt == nil {
-                            self.pendingDeleteAt = Date(timeIntervalSinceNow: Double(self.sessionExpiryInterval!))
-                            print ("Scheduled \(self.clientId) deletion in \(self.sessionExpiryInterval!)")
-                        }
-                    } else {
-                        // will not be deleted
+                    if self.pendingDeleteAt == nil {
+                        self.pendingDeleteAt = Date(timeIntervalSinceNow: Double(self.serverSessionExpiryInterval))
+                        print ("Scheduled \(self.clientId) deletion in \(self.serverSessionExpiryInterval)")
                     }
                 }
             }
@@ -362,12 +358,11 @@ class MqttSession {
             } else {
                 self.sessionExpiryInterval = 0
             }
-            self.maximumSessionExpiryInterval = MqttServer.sharedInstance().maximumSessionExpiryInterval
+            self.serverSessionExpiryInterval = min(MqttServer.sharedInstance().maximumSessionExpiryInterval, self.sessionExpiryInterval!)
 
             /* Maximum Packet Size */
             if (mqttProperties!.maximumPacketSize != nil) {
-                if mqttProperties!.maximumPacketSize! == 0 ||
-                    mqttProperties!.maximumPacketSize! >  2684354565 {
+                if mqttProperties!.maximumPacketSize! == 0 {
                     MqttCompliance.sharedInstance().log(target: "Maximum Packet Size illegal Value")
                     return (false, MqttReturnCode.ProtocolError)
                 }
@@ -462,10 +457,10 @@ class MqttSession {
             self.topicAliasMaximumOut = 0
         }
 
-        if (self.sessionExpiryInterval! != self.maximumSessionExpiryInterval) {
+        if (self.sessionExpiryInterval! > self.serverSessionExpiryInterval) {
             u = MqttPropertyIdentifier.SessionExpiryInterval.rawValue
             remaining.append(u)
-            remaining.append(MqttControlPacket.mqttFourByte(variable: self.maximumSessionExpiryInterval))
+            remaining.append(MqttControlPacket.mqttFourByte(variable: self.serverSessionExpiryInterval))
         }
 
         if (MqttServer.sharedInstance().serverMoved != nil) {
