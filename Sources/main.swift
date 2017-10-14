@@ -173,7 +173,7 @@ if verbose {
     print("\tmaximumQoS \(maximumQoS)")
     print("\tmaximumClientIdLength \(maximumClientIdLength)")
     print("\trestrictedClientId \(restrictedClientId)")
-    print("\tmaximumSessionExpiryInterval \(tmaximumSessionExpiryInterval)")
+    print("\tmaximumSessionExpiryInterval \(maximumSessionExpiryInterval)")
     print("\treceiveMaximum \(receiveMaximum)")
     print("\tmaximumPacketSize \(maximumPacketSize)")
     print("\ttopicAliasMaximum \(topicAliasMaximum)")
