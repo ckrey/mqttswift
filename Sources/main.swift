@@ -22,7 +22,7 @@ var users: [String: String] = [:]
 var userProperties: [String: String] = [:]
 var accessControl: [String: [String: Bool]] = [:]
 
-while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "achik:M:p:P:Q:rR:sS:T:u:U:vw?"),
+while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "ace:hik:M:p:P:Q:rR:sS:T:u:U:vw?"),
     option != -1 {
         switch UnicodeScalar(CUnsignedChar(option)) {
         case "a":
@@ -173,7 +173,7 @@ if verbose {
     print("\tmaximumQoS \(maximumQoS)")
     print("\tmaximumClientIdLength \(maximumClientIdLength)")
     print("\trestrictedClientId \(restrictedClientId)")
-    print("\tmaximumSessionExpiryInterval \(receiveMaximum)")
+    print("\tmaximumSessionExpiryInterval \(tmaximumSessionExpiryInterval)")
     print("\treceiveMaximum \(receiveMaximum)")
     print("\tmaximumPacketSize \(maximumPacketSize)")
     print("\ttopicAliasMaximum \(topicAliasMaximum)")
