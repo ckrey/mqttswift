@@ -174,7 +174,6 @@ class MqttServer {
                         let bytesRead = try socket.read(into: &readData)
                         if bytesRead > 0 {
                             var readBuffer = [UInt8](readData)
-                            print("readbuffer \(readBuffer)")
                             readData.count = 0
 
                             while readBuffer.count > 0 {

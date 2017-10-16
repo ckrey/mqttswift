@@ -990,7 +990,19 @@ class MqttSession {
 
     func write(data: Data!) -> Bool {
         let writeBuffer = [UInt8](data)
-        print("writeBuffer \(writeBuffer)")
+        var end = 31
+        if writeBuffer.count - 1 < end {
+            end = writeBuffer.count - 1
+        }
+        print(">>>", terminator: " ")
+        for i in 0...end {
+            print (String(format:"%02x", writeBuffer[i]), terminator: " ")
+        }
+        if (writeBuffer.count - 1 > end) {
+            print ("...")
+        } else {
+            print ()
+        }
 
         do {
             if self.socket != nil {

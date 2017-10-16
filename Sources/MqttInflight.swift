@@ -16,7 +16,6 @@ class MqttInflight {
     }
 
     func store(message: MqttMessage!) {
-        print("DEBUG3 \(self.inflight) \(message)")
         self.inflight.append(message)
     }
 

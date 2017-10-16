@@ -18,11 +18,11 @@ class MqttControlPacket {
         }
         
         if self.complete() {
-            //print ("MqttControlPacket complete", terminator: ": ")
             var end = 31
             if self.array.count - 1 < end {
                 end = self.array.count - 1
             }
+            print("<<<", terminator: " ")
             for i in 0...end {
                 print (String(format:"%02x", self.array[i]), terminator: " ")
             }
@@ -32,17 +32,6 @@ class MqttControlPacket {
                 print ()
             }
             
-            //            let cpt = self.mqttControlPacketType()
-            //            let dup = self.mqttControlPacketDup()
-            //            let qos = self.mqttControlPacketQoS()
-            //            let retain = self.mqttControlPacketRetain()
-            //            let pid = self.mqttPacketIdentifier()
-            //            print(String(format:"MqttControlPacket: %02x d%d q%d r%d p%d",
-            //                         cpt!.rawValue,
-            //                         dup! ? 1 : 0,
-            //                         qos!.rawValue,
-            //                         retain! ? 1 : 0,
-            //                         pid != nil ? pid! : -1))
             return (true, MqttReturnCode.Success)
         } else {
             let cpt = self.mqttControlPacketType()
