@@ -2,10 +2,10 @@ import Foundation
 
 class MqttControlPacket {
     var array: [UInt8]
-    let max: Int
+    let max: Int?
     var processed : Int
     
-    init(max: Int) {
+    init(max: Int?) {
         self.max = max
         self.processed = 0
         self.array = [UInt8]()
@@ -13,7 +13,7 @@ class MqttControlPacket {
     
     func process(byte: UInt8) -> (Bool, MqttReturnCode?) {
         self.processed = self.processed + 1
-        if self.processed <= self.max {
+        if self.max == nil || self.processed <= self.max! {
             self.array.append(byte)
         }
         

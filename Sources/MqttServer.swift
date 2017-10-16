@@ -14,17 +14,18 @@ class MqttServer {
     let port: Int
     let serverKeepAlive: Int?
     let verbose: Bool
-    let retainAvailable: Bool
-    let maximumQoS: MqttQoS
+    let responseInformation: Bool
+    let retainAvailable: Bool?
+    let maximumQoS: MqttQoS?
     let maximumClientIdLength: Int
     let restrictedClientId: Bool
     let maximumSessionExpiryInterval: Int
-    let receiveMaximum: Int
-    let maximumPacketSize: Int
-    let topicAliasMaximum: Int
-    let wildcardSubscritionAvailable: Bool
-    let subscriptionIdentifiersAvailable: Bool
-    let sharedSubscriptionAvailable: Bool
+    let receiveMaximum: Int?
+    let maximumPacketSize: Int?
+    let topicAliasMaximum: Int?
+    let wildcardSubscritionAvailable: Bool?
+    let subscriptionIdentifiersAvailable: Bool?
+    let sharedSubscriptionAvailable: Bool?
     let serverToUse: String?
     let serverMoved: String?
     let authMethods: [String]
@@ -40,19 +41,20 @@ class MqttServer {
     let socketLockQueue = DispatchQueue(label: "MqttSocketLockQueue")
 
     init(verbose: Bool = false,
+         responseInformation: Bool = false,
          port: Int = 1883,
          serverKeepAlive: Int? = nil,
-         retainAvailable: Bool = false,
-         maximumQoS: MqttQoS = MqttQoS.AtMostOnce,
+         retainAvailable: Bool?,
+         maximumQoS: MqttQoS? = nil,
          maximumClientIdLength: Int = 23,
          restrictedClientId: Bool = true,
          maximumSessionExpiryInterval: Int = 0,
-         receiveMaximum: Int = 1,
-         maximumPacketSize: Int = 2684354565,
-         topicAliasMaximum: Int = 0,
-         wildcardSubscritionAvailable: Bool = false,
-         subscriptionIdentifiersAvailable: Bool = false,
-         sharedSubscriptionAvailable: Bool = false,
+         receiveMaximum: Int? = nil,
+         maximumPacketSize: Int? = nil,
+         topicAliasMaximum: Int? = nil,
+         wildcardSubscritionAvailable: Bool?,
+         subscriptionIdentifiersAvailable: Bool?,
+         sharedSubscriptionAvailable: Bool?,
          serverToUse: String? = nil,
          serverMoved: String? = nil,
          authMethods: [String] = [],
@@ -61,6 +63,7 @@ class MqttServer {
          userProperties: [String: String] = [:],
          accessControl: [String: [String: Bool]] = [:]) {
         self.verbose = verbose
+        self.responseInformation = responseInformation
         self.port = port
         self.serverKeepAlive = serverKeepAlive
         self.retainAvailable = retainAvailable
@@ -277,7 +280,7 @@ class MqttServer {
                                                         returnCode = MqttReturnCode.MalformedPacket
                                                         shouldKeepRunning = false
                                                     }
-                                                    if shouldKeepRunning && willRetain! && !self.retainAvailable {
+                                                    if shouldKeepRunning && willRetain! && self.retainAvailable != nil && !self.retainAvailable! {
                                                         MqttCompliance.sharedInstance().log(target: "RetainNotAvailable")
                                                         returnCode = MqttReturnCode.RetainNotSupported
                                                         shouldKeepRunning = false
@@ -320,6 +323,7 @@ class MqttServer {
                                             }
 
                                             var clientId: String?
+                                            var assignedClientId: String?
                                             var willTopic: String?
                                             var willMessage: Data?
                                             var userName: String?
@@ -358,6 +362,7 @@ class MqttServer {
                                                 if clientId == nil || clientId!.characters.count == 0 {
                                                     MqttCompliance.sharedInstance().log(target: "MQTT-3.1.3-6")
                                                     clientId = String("m5s\(abs(UUID().hashValue))")
+                                                    assignedClientId = clientId
                                                 }
 
                                                 if shouldKeepRunning && clientId!.characters.count > self.maximumClientIdLength {
@@ -442,6 +447,7 @@ class MqttServer {
                                                 if mqttSession == nil {
                                                     MqttCompliance.sharedInstance().log(target: "MQTT-3.2.2-4")
                                                     mqttSession = MqttSession(clientId: clientId!)
+                                                    mqttSession!.assignedClientIdentifier = assignedClientId
                                                     MqttSessions.sharedInstance().store(session: mqttSession!)
                                                 } else {
                                                     if cleanStart! {

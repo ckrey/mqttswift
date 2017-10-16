@@ -3,6 +3,7 @@ import Socket
 
 class MqttSession {
     var clientId: String
+    var assignedClientIdentifier: String?
     var socket: Socket?
     var user: String?
     var connectKeepAlive: Int
@@ -347,7 +348,6 @@ class MqttSession {
         } else {
             self.topicAliasMaximumOut = 0
         }
-        self.topicAliasMaximumIn = MqttServer.sharedInstance().topicAliasMaximum
 
         if mqttProperties != nil {
             if (mqttProperties!.willDelayInterval != nil) {
@@ -397,50 +397,77 @@ class MqttSession {
         variableData.append(u)
 
         var remaining = Data()
-        u = MqttPropertyIdentifier.ReceiveMaximum.rawValue
-        remaining.append(u)
-        remaining.append(MqttControlPacket.mqttTwoByte(variable: MqttServer.sharedInstance().receiveMaximum))
 
-        u = MqttPropertyIdentifier.MaximumQoS.rawValue
-        remaining.append(u)
-        u = MqttServer.sharedInstance().maximumQoS.rawValue
-        remaining.append(u)
+        if MqttServer.sharedInstance().receiveMaximum != nil {
+            u = MqttPropertyIdentifier.ReceiveMaximum.rawValue
+            remaining.append(u)
+            remaining.append(MqttControlPacket.mqttTwoByte(variable: MqttServer.sharedInstance().receiveMaximum!))
+        }
 
-        u = MqttPropertyIdentifier.RetainAvailable.rawValue
-        remaining.append(u)
-        u = MqttServer.sharedInstance().retainAvailable ? 1 : 0
-        remaining.append(u)
+        if MqttServer.sharedInstance().maximumQoS != nil {
+            u = MqttPropertyIdentifier.MaximumQoS.rawValue
+            remaining.append(u)
+            u = MqttServer.sharedInstance().maximumQoS!.rawValue
+            remaining.append(u)
+        }
 
-        u = MqttPropertyIdentifier.MaximumPacketSize.rawValue
-        remaining.append(u)
-        remaining.append(MqttControlPacket.mqttFourByte(variable: MqttServer.sharedInstance().maximumPacketSize))
+        if MqttServer.sharedInstance().retainAvailable != nil {
+            u = MqttPropertyIdentifier.RetainAvailable.rawValue
+            remaining.append(u)
+            u = MqttServer.sharedInstance().retainAvailable! ? 1 : 0
+            remaining.append(u)
+        }
 
-        u = MqttPropertyIdentifier.AssignedClientIdentifier.rawValue
-        remaining.append(u)
-        remaining.append(MqttControlPacket.mqttUtf8(variable: self.clientId))
+        if MqttServer.sharedInstance().maximumPacketSize != nil {
+            u = MqttPropertyIdentifier.MaximumPacketSize.rawValue
+            remaining.append(u)
+            remaining.append(MqttControlPacket.mqttFourByte(variable: MqttServer.sharedInstance().maximumPacketSize!))
+        }
 
-        u = MqttPropertyIdentifier.TopicAliasMaximum.rawValue
-        remaining.append(u)
-        remaining.append(MqttControlPacket.mqttTwoByte(variable: MqttServer.sharedInstance().topicAliasMaximum))
+        if self.assignedClientIdentifier != nil {
+            u = MqttPropertyIdentifier.AssignedClientIdentifier.rawValue
+            remaining.append(u)
+            remaining.append(MqttControlPacket.mqttUtf8(variable: self.assignedClientIdentifier!))
+        }
 
-        u = MqttPropertyIdentifier.ResponseInformation.rawValue
-        remaining.append(u)
-        remaining.append(MqttControlPacket.mqttUtf8(variable: "Todo"))
+        if MqttServer.sharedInstance().topicAliasMaximum != nil {
+            u = MqttPropertyIdentifier.TopicAliasMaximum.rawValue
+            remaining.append(u)
+            remaining.append(MqttControlPacket.mqttTwoByte(variable: MqttServer.sharedInstance().topicAliasMaximum!))
+            self.topicAliasMaximumIn = MqttServer.sharedInstance().topicAliasMaximum!
+        } else {
+            self.topicAliasMaximumIn = 0
+        }
 
-        u = MqttPropertyIdentifier.WildcardSubscriptionAvailable.rawValue
-        remaining.append(u)
-        u = MqttServer.sharedInstance().wildcardSubscritionAvailable ? 1 : 0
-        remaining.append(u)
+        if MqttServer.sharedInstance().responseInformation &&
+            mqttProperties != nil &&
+            mqttProperties!.requestResponseInformation != nil &&
+            mqttProperties!.requestResponseInformation! == 1 {
+            u = MqttPropertyIdentifier.ResponseInformation.rawValue
+            remaining.append(u)
+            remaining.append(MqttControlPacket.mqttUtf8(variable: "MQTTClient/\(clientId)"))
+        }
 
-        u = MqttPropertyIdentifier.SubscriptionIdentifiersAvailable.rawValue
-        remaining.append(u)
-        u = MqttServer.sharedInstance().subscriptionIdentifiersAvailable ? 1 : 0
-        remaining.append(u)
+        if MqttServer.sharedInstance().wildcardSubscritionAvailable != nil {
+            u = MqttPropertyIdentifier.WildcardSubscriptionAvailable.rawValue
+            remaining.append(u)
+            u = MqttServer.sharedInstance().wildcardSubscritionAvailable! ? 1 : 0
+            remaining.append(u)
+        }
 
-        u = MqttPropertyIdentifier.SharedSubscriptionAvailable.rawValue
-        remaining.append(u)
-        u = MqttServer.sharedInstance().sharedSubscriptionAvailable ? 1 : 0
-        remaining.append(u)
+        if MqttServer.sharedInstance().subscriptionIdentifiersAvailable != nil {
+            u = MqttPropertyIdentifier.SubscriptionIdentifiersAvailable.rawValue
+            remaining.append(u)
+            u = MqttServer.sharedInstance().subscriptionIdentifiersAvailable! ? 1 : 0
+            remaining.append(u)
+        }
+
+        if MqttServer.sharedInstance().sharedSubscriptionAvailable != nil {
+            u = MqttPropertyIdentifier.SharedSubscriptionAvailable.rawValue
+            remaining.append(u)
+            u = MqttServer.sharedInstance().sharedSubscriptionAvailable! ? 1 : 0
+            remaining.append(u)
+        }
 
         if (MqttServer.sharedInstance().serverKeepAlive != nil) {
             self.serverKeepAlive = MqttServer.sharedInstance().serverKeepAlive!
@@ -472,10 +499,6 @@ class MqttSession {
             remaining.append(u)
             remaining.append(MqttControlPacket.mqttUtf8(variable: MqttServer.sharedInstance().serverToUse!))
         }
-
-        u = MqttPropertyIdentifier.ResponseInformation.rawValue
-        remaining.append(u)
-        remaining.append(MqttControlPacket.mqttUtf8(variable: "Todo"))
 
         let reasonString = "Reason"
         let additionalReasonString = connack.count +
@@ -809,7 +832,8 @@ class MqttSession {
                 return (false, MqttReturnCode.ProtocolError)
             }
 
-            if !MqttServer.sharedInstance().wildcardSubscritionAvailable &&
+            if MqttServer.sharedInstance().wildcardSubscritionAvailable != nil &&
+                !MqttServer.sharedInstance().wildcardSubscritionAvailable! &&
                 (subscription.topicFilter.contains("#") ||
                     subscription.topicFilter.contains("+")) {
                 MqttCompliance.sharedInstance().log(target: "SUBSCRIBE contains wildcards which are not supported")
@@ -826,9 +850,10 @@ class MqttSession {
                 return (false, MqttReturnCode.ProtocolError)
             }
 
-            if subscription.qos.rawValue > MqttServer.sharedInstance().maximumQoS.rawValue {
+            if MqttServer.sharedInstance().maximumQoS != nil &&
+                subscription.qos.rawValue > MqttServer.sharedInstance().maximumQoS!.rawValue {
                 MqttCompliance.sharedInstance().log(target: "SUBSCRIBE > maximumQoS")
-                subscription.qos = MqttServer.sharedInstance().maximumQoS
+                subscription.qos = MqttServer.sharedInstance().maximumQoS!
             }
 
             self.store(subscription: subscription)

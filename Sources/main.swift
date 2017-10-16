@@ -3,17 +3,18 @@ import Foundation
 var verbose = false
 var port: Int = 1883
 var serverKeepAlive: Int? = nil
-var retainAvailable = false
-var maximumQoS = MqttQoS.AtMostOnce
+var retainAvailable : Bool?
+var responseInformation = false
+var maximumQoS : MqttQoS? = nil
 var maximumClientIdLength = 23
 var restrictedClientId = true
-var receiveMaximum = 1
+var receiveMaximum : Int? = nil
 var maximumSessionExpiryInterval = 0
-var maximumPacketSize = 10000
-var topicAliasMaximum = 0
-var wildcardSubscritionAvailable = false
-var subscriptionIdentifiersAvailable = false
-var sharedSubscriptionAvailable = false
+var maximumPacketSize : Int? = nil
+var topicAliasMaximum : Int? = nil
+var wildcardSubscritionAvailable : Bool?
+var subscriptionIdentifiersAvailable : Bool?
+var sharedSubscriptionAvailable : Bool?
 var serverToUse: String? = nil
 var serverMoved: String? = nil
 var authMethods = [String]()
@@ -22,21 +23,34 @@ var users: [String: String] = [:]
 var userProperties: [String: String] = [:]
 var accessControl: [String: [String: Bool]] = [:]
 
-while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "ace:hik:M:p:P:Q:rR:sS:T:u:U:vw?"),
+while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "aA:ce:hiIk:M:O:p:P:Q:rRsST:u:U:vwWx?"),
     option != -1 {
         switch UnicodeScalar(CUnsignedChar(option)) {
         case "a":
             allowAnonymous = true
-        case "c":
-            restrictedClientId = false
-        case "i":
-            subscriptionIdentifiersAvailable = true
 
-        case "M":
+        case "A": // use Another server
+            let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
+            if s != nil {
+                serverToUse = s!
+            }
+
+        case "O": // server mOved
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
             if s != nil {
                 serverMoved = s!
             }
+
+
+        case "c":
+            restrictedClientId = false
+
+        case "i":
+            subscriptionIdentifiersAvailable = false
+
+        case "I":
+            subscriptionIdentifiersAvailable = true
+
         case "p":
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
             if s != nil {
@@ -81,9 +95,12 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "ace:hi
                 }
             }
         case "r":
-            retainAvailable = true
+            retainAvailable = false
 
         case "R":
+            retainAvailable = true
+
+        case "M":
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
             if s != nil {
                 let r = Int(s!)
@@ -93,13 +110,10 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "ace:hi
             }
 
         case "s":
-            sharedSubscriptionAvailable = true
+            sharedSubscriptionAvailable = false
 
         case "S":
-            let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
-            if s != nil {
-                serverToUse = s!
-            }
+            sharedSubscriptionAvailable = true
 
         case "T":
             let s = String.init(cString: optarg, encoding: String.Encoding.utf8)
@@ -129,31 +143,51 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "ace:hi
             }
         case "v":
             verbose = true
+            
         case "w":
+            wildcardSubscritionAvailable = false
+        case "W":
             wildcardSubscritionAvailable = true
 
+        case "x":
+            responseInformation = true
 
         default:
             let command = String(format:"%s", CommandLine.unsafeArgv[0]!)
             print("Usage \(command) [Options]")
+
             print("\t-a allow anonymous (default off)")
+            print("\t-A server use Another server (default none)")
+            print("\t-O server server mOved (default none)")
+
             print("\t-c do not restrict Client ID to charactes and letters (default on)")
             print("\t-e max session expiry interval (default 0)")
-            print("\t-i subscription identifiers available (default off)")
+
+            print("\t-i subscription identifiers not available (default implicit true)")
+            print("\t-I subscription identifiers available (default implicit true)")
+
             print("\t-k server keep alive (default none)")
-            print("\t-M server server moved (default none)")
+            print("\t-M max receive (input) Maximum (default 1)")
+
             print("\t-p port listen to port (default 1883)")
             print("\t-P max maximum packet size (default 10.000)")
             print("\t-Q max QoS supported (default 0)")
-            print("\t-r RETAIN is available (default not)")
-            print("\t-R max receive (input) Maximum (default 1)")
-            print("\t-s shared subscriptions available (default off)")
-            print("\t-S server use another server (default none)")
+
+            print("\t-r RETAIN is not vailable (default implicit true)")
+            print("\t-R RETAIN is available (default implicit true)")
+
+            print("\t-s shared subscriptions not available (default implicit true)")
+            print("\t-S shared subscriptions available (default implicit true)")
+
             print("\t-T max topic alias Maximum (default 0)")
             print("\t-u user[:password] add user with password (default none)")
             print("\t-U name=value add user property")
             print("\t-v verbose (default off)")
-            print("\t-w wildcard subscriptions available (default off)")
+
+            print("\t-w wildcard subscriptions not available (default implicit true)")
+            print("\t-W wildcard subscriptions available (default implicit true)")
+
+            print("\t-x provide response information (default false)")
 
             exit(1)
         }
@@ -163,34 +197,33 @@ if verbose {
     print("A Minimal MQTT v5.0 Conforming Broker in Swift")
     print("© 2017 Christoph Krey <c@ckrey.de>")
     print("\tport \(port)")
-    if (serverKeepAlive != nil) {
-        print("\tserverKeepAlive \(serverKeepAlive!)")
-    } else {
-        print("\tserverKeepAlive none")
 
-    }
-    print("\tretainAvailable \(retainAvailable)")
+    print("\tserverKeepAlive \(serverKeepAlive != nil ? String(serverKeepAlive!) : "n/a")")
+    print("\tretainAvailable \(retainAvailable != nil ? String(retainAvailable!) : "(not specified)")")
     print("\tmaximumQoS \(maximumQoS)")
     print("\tmaximumClientIdLength \(maximumClientIdLength)")
     print("\trestrictedClientId \(restrictedClientId)")
     print("\tmaximumSessionExpiryInterval \(maximumSessionExpiryInterval)")
     print("\treceiveMaximum \(receiveMaximum)")
-    print("\tmaximumPacketSize \(maximumPacketSize)")
+    print("\tmaximumPacketSize \(maximumPacketSize != nil ? String(maximumPacketSize!) : "(not specified)"))")
     print("\ttopicAliasMaximum \(topicAliasMaximum)")
-    print("\twildcardSubscritionAvailable \(wildcardSubscritionAvailable)")
-    print("\tsubscriptionIdentifiersAvailable \(subscriptionIdentifiersAvailable)")
-    print("\tsharedSubscriptionAvailable \(sharedSubscriptionAvailable)")
-    print("\tserverToUse \(serverToUse != nil ? serverToUse! : "n/a")")
-    print("\tserverMoved \(serverMoved != nil ? serverMoved! : "n/a")")
+    print("\twildcardSubscritionAvailable \(wildcardSubscritionAvailable != nil ? String(wildcardSubscritionAvailable!) : "(not specified)")")
+    print("\tsubscriptionIdentifiersAvailable \(subscriptionIdentifiersAvailable != nil ? String(subscriptionIdentifiersAvailable!) : "(not specified)")")
+    print("\tsharedSubscriptionAvailable \(sharedSubscriptionAvailable != nil ? String(sharedSubscriptionAvailable!) : "(not specified)")")
+    print("\tserverToUse \(serverToUse != nil ? serverToUse! : "(not specified)")")
+    print("\tserverMoved \(serverMoved != nil ? serverMoved! : "(not specified)")")
     print("\tauthMethods \(authMethods)")
     print("\tallowAnonymous \(allowAnonymous)")
     print("\tusers \(users)")
     print("\tuserProperties \(userProperties)")
     print("\taccessControl \(accessControl)")
+    print("\tverbose \(verbose)")
+    print("\tresponseInformation \(responseInformation)")
     print()
 }
 
 let server = MqttServer(verbose: verbose,
+                        responseInformation: responseInformation,
                         port: port,
                         serverKeepAlive: serverKeepAlive,
                         retainAvailable: retainAvailable,
