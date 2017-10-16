@@ -158,7 +158,6 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "aA:ce:
 
             print("\t-a allow anonymous (default off)")
             print("\t-A server use Another server (default none)")
-            print("\t-O server server mOved (default none)")
 
             print("\t-c do not restrict Client ID to charactes and letters (default on)")
             print("\t-e max session expiry interval (default 0)")
@@ -168,6 +167,8 @@ while case let option = getopt(CommandLine.argc, CommandLine.unsafeArgv, "aA:ce:
 
             print("\t-k server keep alive (default none)")
             print("\t-M max receive (input) Maximum (default 1)")
+
+            print("\t-O server server mOved (default none)")
 
             print("\t-p port listen to port (default 1883)")
             print("\t-P max maximum packet size (default 10.000)")
@@ -198,18 +199,18 @@ if verbose {
     print("© 2017 Christoph Krey <c@ckrey.de>")
     print("\tport \(port)")
 
-    print("\tserverKeepAlive \(serverKeepAlive != nil ? String(serverKeepAlive!) : "n/a")")
-    print("\tretainAvailable \(retainAvailable != nil ? String(retainAvailable!) : "(not specified)")")
-    print("\tmaximumQoS \(maximumQoS)")
+    print("\tserverKeepAlive \(serverKeepAlive != nil ? String(serverKeepAlive!) : "(not specified)")")
+    print("\tretainAvailable \(retainAvailable != nil ? String(retainAvailable!) : "(not specified implicit true)")")
+    print("\tmaximumQoS \(maximumQoS != nil ? String(maximumQoS!.rawValue) : "(not specified, defaults to 2)")")
     print("\tmaximumClientIdLength \(maximumClientIdLength)")
     print("\trestrictedClientId \(restrictedClientId)")
     print("\tmaximumSessionExpiryInterval \(maximumSessionExpiryInterval)")
-    print("\treceiveMaximum \(receiveMaximum)")
-    print("\tmaximumPacketSize \(maximumPacketSize != nil ? String(maximumPacketSize!) : "(not specified)"))")
-    print("\ttopicAliasMaximum \(topicAliasMaximum)")
-    print("\twildcardSubscritionAvailable \(wildcardSubscritionAvailable != nil ? String(wildcardSubscritionAvailable!) : "(not specified)")")
-    print("\tsubscriptionIdentifiersAvailable \(subscriptionIdentifiersAvailable != nil ? String(subscriptionIdentifiersAvailable!) : "(not specified)")")
-    print("\tsharedSubscriptionAvailable \(sharedSubscriptionAvailable != nil ? String(sharedSubscriptionAvailable!) : "(not specified)")")
+    print("\treceiveMaximum \(receiveMaximum != nil ? String(receiveMaximum!) : "(not specified, defaults to 65,535)")")
+    print("\tmaximumPacketSize \(maximumPacketSize != nil ? String(maximumPacketSize!) : "(not specified)")")
+    print("\ttopicAliasMaximum \(topicAliasMaximum != nil ? String(topicAliasMaximum!) : "(not specified, defaults to 0)")")
+    print("\twildcardSubscritionAvailable \(wildcardSubscritionAvailable != nil ? String(wildcardSubscritionAvailable!) : "(not specified implicit true)")")
+    print("\tsubscriptionIdentifiersAvailable \(subscriptionIdentifiersAvailable != nil ? String(subscriptionIdentifiersAvailable!) : "(not specified implicit true)")")
+    print("\tsharedSubscriptionAvailable \(sharedSubscriptionAvailable != nil ? String(sharedSubscriptionAvailable!) : "(not specified implicit true)")")
     print("\tserverToUse \(serverToUse != nil ? serverToUse! : "(not specified)")")
     print("\tserverMoved \(serverMoved != nil ? serverMoved! : "(not specified)")")
     print("\tauthMethods \(authMethods)")
