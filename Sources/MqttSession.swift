@@ -229,7 +229,7 @@ class MqttSession {
     }
 
     func send(message: MqttMessage!) {
-        self.debug(s: "Sending to \(clientId) q\(message.qos) pid\(message.packetIdentifier) \(message.topic) \(message.data) pFI=\(message.payloadFormatIndicator) pEI=\(message.publicationExpiryInterval) tA=\(message.topicAlias) sI=\(message.subscriptionIdentifiers)", p:nil)
+        self.debug(s: "Sending to \(clientId) q\(message.qos) pid\(message.packetIdentifier) \(message.topic) \(message.data) pFI=\(message.payloadFormatIndicator) pEI=\(message.publicationExpiryInterval) tA=\(message.topicAlias) sI=\(message.subscriptionIdentifiers) uP=\(message.userProperties)", p:nil)
         var publish = Data()
         var u : UInt8
 
@@ -304,7 +304,7 @@ class MqttSession {
                 properties.count +
                 userProperties.count
 
-            if self.maximumPacketSize != nil  &&
+            if self.maximumPacketSize == nil ||
                 additionalUserProperties <= self.maximumPacketSize! {
                 properties.append(userProperties)
             }
@@ -508,7 +508,7 @@ class MqttSession {
             1 +
             MqttControlPacket.mqttUtf8(variable: reasonString).count
 
-        if self.maximumPacketSize != nil  &&
+        if self.maximumPacketSize == nil  ||
             additionalReasonString <= self.maximumPacketSize! {
             u = MqttPropertyIdentifier.ReasonString.rawValue
             remaining.append(u)
@@ -530,7 +530,7 @@ class MqttSession {
             remaining.count +
             userProperties.count
 
-        if self.maximumPacketSize != nil  &&
+        if self.maximumPacketSize == nil ||
             additionalUserProperties <= self.maximumPacketSize! {
             u = MqttPropertyIdentifier.ReasonString.rawValue
             remaining.append(userProperties)
