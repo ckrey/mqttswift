@@ -17,6 +17,7 @@ class MqttSession {
     var willMessage: Data?
     var willQoS: MqttQoS?
     var willRetain: Bool?
+    var willProperties: MqttProperties?
 
     var shouldKeepRunning: Bool
     var returnCode: MqttReturnCode?
@@ -63,6 +64,7 @@ class MqttSession {
         self.willMessage = nil
         self.willQoS = nil
         self.willRetain = nil
+        self.willProperties = nil
 
         self.pendingWillAt = nil
         self.lastPacket = Date()
@@ -134,8 +136,15 @@ class MqttSession {
 
     func askForWill() {
         if (self.willFlag) {
-            self.pendingWillAt = Date(timeIntervalSinceNow: Double(self.willDelayInterval))
-            print ("Scheduled \(self.clientId) will in \(self.willDelayInterval)")
+            var willDelayInterval = 0.0
+            if self.willProperties != nil {
+                if self.willProperties!.willDelayInterval != nil {
+                    willDelayInterval = Double(self.willProperties!.willDelayInterval!)
+                }
+            }
+
+            self.pendingWillAt = Date(timeIntervalSinceNow: willDelayInterval)
+            print ("Scheduled \(self.clientId) will in \(willDelayInterval)")
         }
     }
 
@@ -350,9 +359,6 @@ class MqttSession {
         }
 
         if mqttProperties != nil {
-            if (mqttProperties!.willDelayInterval != nil) {
-                self.willDelayInterval = mqttProperties!.willDelayInterval!
-            }
             if (mqttProperties!.sessionExpiryInterval != nil) {
                 self.sessionExpiryInterval = mqttProperties!.sessionExpiryInterval!
             } else {
