@@ -325,18 +325,20 @@ class MqttServer {
                                             var assignedClientId: String?
                                             var willTopic: String?
                                             var willMessage: Data?
+                                            var willProperties: MqttProperties?
                                             var userName: String?
                                             var password: Data?
 
                                             if (shouldKeepRunning) {
-                                                clientId = cp!.mqttConnectStringField(position: 0)
+                                                clientId = cp!.mqttConnectStringField(position: 0, willProperties: false)
                                                 if willFlag {
-                                                    willTopic = cp!.mqttConnectStringField(position: 1)
-                                                    willMessage = cp!.mqttConnectDataField(position: 2)
+                                                    willProperties = cp!.mqttWillProperties()
+                                                    willTopic = cp!.mqttConnectStringField(position: 1, willProperties: true)
+                                                    willMessage = cp!.mqttConnectDataField(position: 2, willProperties: true)
                                                     if userNameFlag! {
-                                                        userName = cp!.mqttConnectStringField(position: 3)
+                                                        userName = cp!.mqttConnectStringField(position: 3, willProperties: true)
                                                         if passwordFlag! {
-                                                            password = cp!.mqttConnectDataField(position: 4)
+                                                            password = cp!.mqttConnectDataField(position: 4, willProperties: true)
                                                         }
                                                     } else {
                                                         if passwordFlag! {
@@ -344,13 +346,13 @@ class MqttServer {
                                                     }
                                                 } else {
                                                     if userNameFlag! {
-                                                        userName = cp!.mqttConnectStringField(position: 1)
+                                                        userName = cp!.mqttConnectStringField(position: 1, willProperties: false)
                                                         if passwordFlag! {
-                                                            password = cp!.mqttConnectDataField(position: 2)
+                                                            password = cp!.mqttConnectDataField(position: 2, willProperties: false)
                                                         }
                                                     } else {
                                                         if passwordFlag! {
-                                                            password = cp!.mqttConnectDataField(position: 1)
+                                                            password = cp!.mqttConnectDataField(position: 1, willProperties: false)
                                                         }
                                                     }
                                                 }
@@ -468,6 +470,7 @@ class MqttServer {
                                                 mqttSession!.willMessage = willMessage
                                                 mqttSession!.willQoS = willQoS
                                                 mqttSession!.willRetain = willRetain
+                                                mqttSession!.willProperties = willProperties
 
                                                 (shouldKeepRunning, returnCode) = mqttSession!.connect(cp:cp)
                                             }
@@ -548,11 +551,29 @@ class MqttServer {
                                                                          qos: .AtMostOnce,
                                                                          retain: false),
                                                     from:"")
+
+
                 if mqttSession != nil {
                     mqttSession!.debug(s:"DISCONNECT sent \(returnCode)", p:nil)
                 }
+
+                let writeBuffer = [UInt8](disconnect)
+                var end = 31
+                if writeBuffer.count - 1 < end {
+                    end = writeBuffer.count - 1
+                }
+                print(">>>", terminator: " ")
+                for i in 0...end {
+                    print (String(format:"%02x", writeBuffer[i]), terminator: " ")
+                }
+                if (writeBuffer.count - 1 > end) {
+                    print ("...")
+                } else {
+                    print ()
+                }
+
                 try socket.write(from: disconnect)
-                
+
                 payloadString = "\(Int(Date.init().timeIntervalSince1970)): socket closed \(socket.remoteHostname):\(socket.remotePort)"
                 MqttSessions.processReceivedMessage(message: MqttMessage(topic: "$SYS/broker/log/D",
                                                                          data: payloadString.data(using:String.Encoding.utf8),
@@ -582,7 +603,6 @@ class MqttServer {
             }
         }
     }
-
 }
 
 
