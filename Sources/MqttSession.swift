@@ -574,13 +574,13 @@ class MqttSession {
         let qos = cp!.mqttControlPacketQoS()
         let mqttProperties = cp!.mqttProperties()
 
-        if topic!.characters.count == 0  &&
+        if topic!.count == 0  &&
             (mqttProperties == nil || mqttProperties!.topicAlias == nil || mqttProperties!.topicAlias! <= 0) {
             MqttCompliance.sharedInstance().log(target: "MQTT-4.7.3-1")
             return (false, MqttReturnCode.TopicNameInvalid)
         }
 
-        if topic!.characters.count == 0  &&
+        if topic!.count == 0  &&
             (mqttProperties != nil && mqttProperties!.topicAlias != nil && mqttProperties!.topicAlias! > 0 &&
             self.topicAliasesIn[mqttProperties!.topicAlias!] != nil) {
             MqttCompliance.sharedInstance().log(target: "Replaced Topic from Topic Alias")

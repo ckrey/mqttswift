@@ -358,13 +358,13 @@ class MqttServer {
 
                                             /* Client ID */
                                             if (shouldKeepRunning) {
-                                                if clientId == nil || clientId!.characters.count == 0 {
+                                                if clientId == nil || clientId!.count == 0 {
                                                     MqttCompliance.sharedInstance().log(target: "MQTT-3.1.3-6")
                                                     clientId = String("m5s\(abs(UUID().hashValue))")
                                                     assignedClientId = clientId
                                                 }
 
-                                                if shouldKeepRunning && clientId!.characters.count > self.maximumClientIdLength {
+                                                if shouldKeepRunning && clientId!.count > self.maximumClientIdLength {
                                                     MqttCompliance.sharedInstance().log(target: "MQTT-3.1.3-8")
                                                     returnCode = MqttReturnCode.ClientIdentifierNotValid
                                                     shouldKeepRunning = false

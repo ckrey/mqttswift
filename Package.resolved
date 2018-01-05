@@ -1,0 +1,16 @@
+{
+  "object": {
+    "pins": [
+      {
+        "package": "Socket",
+        "repositoryURL": "https://github.com/IBM-Swift/BlueSocket",
+        "state": {
+          "branch": null,
+          "revision": "c1a68c4d2ee065175a815c7044ad5a5b824ae615",
+          "version": "0.10.15"
+        }
+      }
+    ]
+  },
+  "version": 1
+}
